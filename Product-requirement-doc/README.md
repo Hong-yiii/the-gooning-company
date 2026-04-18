@@ -13,7 +13,7 @@ Specs for each agent: **role**, **private `god.md`**, **MCP tools used**, **casc
 
 ## Shared template (fill in each stub)
 
-Use this structure in every `*.md` below.
+Use this structure in every `*.md` below. A spec may describe either a single domain agent or a router-facing lead with private internal sub-agents.
 
 ```markdown
 ## Role
@@ -26,6 +26,11 @@ Use this structure in every `*.md` below.
 ## MCP tools (namespaced)
 - List tool names (e.g. roadmap.list_items) — mock OK
 - Preconditions / ownership (who may call)
+
+## Internal team structure
+- Lead / owner if applicable
+- Specialist sub-agents if applicable
+- Delegation and approval rules
 
 ## Cascade — inbound
 - Event types + payload summary the router may deliver

@@ -1,0 +1,5 @@
+workspaces/*/state.json
+workspaces/*/sessions/
+workspaces/*/logs/
+workspaces/*/attachments/
+state/cascade-trace.jsonl

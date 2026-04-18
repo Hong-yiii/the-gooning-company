@@ -1,0 +1,8 @@
+[project]
+name = "the-gooning-company"
+version = "0.1.0"
+description = "OpenHarness multi-agent company scaffold"
+requires-python = ">=3.13"
+dependencies = [
+  "openharness-ai==0.1.6",
+]
