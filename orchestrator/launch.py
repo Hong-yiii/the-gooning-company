@@ -265,6 +265,45 @@ def _run_router(cfg: OrchestratorConfig, bootstrap: Bootstrap, *, extra_args: li
 
 
 # ---------------------------------------------------------------------------
+# Dashboard launch — serves the web UI + JSON/SSE API.
+# ---------------------------------------------------------------------------
+
+
+def _run_dashboard(
+    cfg: OrchestratorConfig,
+    bootstrap: Bootstrap,
+    *,
+    host: str,
+    port: int,
+) -> int:
+    """Serve the web dashboard. Imported lazily so the TUI path has no
+    uvicorn/starlette import cost even though they're declared deps."""
+    import uvicorn
+
+    from dashboard_backend.app import DashboardPaths, build_app
+
+    paths = DashboardPaths.from_repo(cfg.repo_root, model=bootstrap.model)
+    app = build_app(paths)
+
+    print(f"[orchestrator] dashboard serving on http://{host}:{port}")
+    print(f"[orchestrator] model: {bootstrap.model}")
+    if not paths.spa_dist_dir.is_dir():
+        print(
+            "[orchestrator] SPA bundle missing — UI will render a setup stub.\n"
+            "               build once: `cd dashboard && npm install && npm run build`\n"
+            "               iterate:    `cd dashboard && npm run dev` (proxies /api)"
+        )
+
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level=os.environ.get("GOONING_DASHBOARD_LOG", "info").lower(),
+    )
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -302,16 +341,32 @@ def main(argv: list[str] | None = None) -> int:
         metavar="PROMPT",
         help="Non-interactive: pass this prompt to the router with `ohmo --print`.",
     )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Serve the web dashboard (+ mock MCP) instead of the interactive TUI.",
+    )
+    parser.add_argument(
+        "--dashboard-host",
+        default=os.environ.get("GOONING_DASHBOARD_HOST", "127.0.0.1"),
+        help="Dashboard bind host (default 127.0.0.1).",
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=int(os.environ.get("GOONING_DASHBOARD_PORT", "8000")),
+        help="Dashboard bind port (default 8000).",
+    )
     args, extra = parser.parse_known_args(argv)
 
     cfg = load_config()
     _preflight(cfg)
 
-    # Non-interactive runs (``--print``) have no human to approve mutating
-    # tool calls, so the default permission mode hangs the router at the
-    # first ``agent(...)`` spawn. Opt the whole session into ``full_auto``
-    # for ``--print`` unless the caller has already picked a mode.
-    if args.print_prompt is not None:
+    # Non-interactive runs (``--print`` and ``--dashboard``) have no human
+    # to approve mutating tool calls, so the default permission mode hangs
+    # the router at the first ``agent(...)`` spawn. Opt the whole session
+    # into ``full_auto`` unless the caller has already picked a mode.
+    if args.print_prompt is not None or args.dashboard:
         os.environ.setdefault("GOONING_PERMISSION_MODE", "full_auto")
 
     if args.describe:
@@ -343,6 +398,14 @@ def main(argv: list[str] | None = None) -> int:
             if mcp_proc_ref[0] is not None:
                 mcp_proc_ref[0].wait()
             return 0
+
+        if args.dashboard:
+            return _run_dashboard(
+                cfg,
+                bootstrap,
+                host=args.dashboard_host,
+                port=args.dashboard_port,
+            )
 
         router_extra: list[str] = list(extra)
         if args.print_prompt is not None:

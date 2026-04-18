@@ -24,23 +24,32 @@ const STATUS_COLORS = {
   done: styles.statusDone,
 }
 
-export default function RoadmapPanel() {
+export default function RoadmapPanel({ liveColumns }) {
   const [roadmap, setRoadmap] = useState({})
   const [loading, setLoading] = useState(true)
   const [expandedCard, setExpandedCard] = useState(null)
 
   useEffect(() => {
-    fetchRoadmap().then((data) => {
-      setRoadmap(data)
-      setLoading(false)
-    })
+    fetchRoadmap()
+      .then((data) => {
+        setRoadmap(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
 
-    // TODO(backend): replace with SSE subscription for live roadmap updates
+    // Polling fallback in case SSE is down (disabled when live events arrive).
     const id = setInterval(() => {
-      fetchRoadmap().then(setRoadmap)
-    }, 10000)
+      fetchRoadmap().then(setRoadmap).catch(() => {})
+    }, 20000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    if (liveColumns) {
+      setRoadmap(liveColumns)
+      setLoading(false)
+    }
+  }, [liveColumns])
 
   const totalItems = Object.values(roadmap).reduce((acc, col) => acc + col.length, 0)
 

@@ -8,7 +8,7 @@ const AGENTS = [
   { key: 'finance', label: 'Finance', color: styles.agentFinance },
 ]
 
-export default function GodFilesPanel({ agentStatuses }) {
+export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
   const [activeAgent, setActiveAgent] = useState('product')
   const [godFiles, setGodFiles] = useState({ product: null, marketing: null, finance: null })
   const [lastPulse, setLastPulse] = useState({ product: null, marketing: null, finance: null })
@@ -22,23 +22,40 @@ export default function GodFilesPanel({ agentStatuses }) {
     })
   }, [])
 
+  // Slow polling fallback — SSE pushes live updates via liveUpdate prop.
   useEffect(() => {
     const unsubscribers = AGENTS.map(({ key }) =>
       subscribeGodFile(key, (data) => {
         setGodFiles((prev) => {
           const prevData = prev[key]
           const changed = prevData && prevData.updatedAt !== data.updatedAt
-          if (changed) {
-            setLastPulse((p) => ({ ...p, [key]: data.updatedAt }))
-            setPulseActive((p) => ({ ...p, [key]: true }))
-            setTimeout(() => setPulseActive((p) => ({ ...p, [key]: false })), 2000)
-          }
+          if (changed) triggerPulse(key, data.updatedAt)
           return { ...prev, [key]: data }
         })
-      }, 8000)
+      }, 30000)
     )
     return () => unsubscribers.forEach((fn) => fn())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Real-time SSE push from /api/events — updates arrive as
+  // { agent, content, updatedAt } whenever a teammate writes god.md.
+  useEffect(() => {
+    if (!liveUpdate || !liveUpdate.agent) return
+    const { agent } = liveUpdate
+    setGodFiles((prev) => {
+      const prevData = prev[agent]
+      const changed = !prevData || prevData.updatedAt !== liveUpdate.updatedAt
+      if (changed) triggerPulse(agent, liveUpdate.updatedAt)
+      return { ...prev, [agent]: liveUpdate }
+    })
+  }, [liveUpdate])
+
+  const triggerPulse = (agent, ts) => {
+    setLastPulse((p) => ({ ...p, [agent]: ts }))
+    setPulseActive((p) => ({ ...p, [agent]: true }))
+    setTimeout(() => setPulseActive((p) => ({ ...p, [agent]: false })), 2000)
+  }
 
   const active = godFiles[activeAgent]
 

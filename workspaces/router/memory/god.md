@@ -8,6 +8,9 @@ Your living log. Update as you route.
 ## Pending cascades
 - None. Product-originated onboarding simplification delta was sent to Marketing and Finance in this turn.
 
+## Latest routing update
+- 2026-04-18 — Founder requested end-to-end handling of onboarding churn again. Routed to Product, which proposed roadmap item `P-001` to compress signup from 9 steps to 3 and defer non-essential questions. Cascaded `P-001` to Marketing for launch/message guidance and to Finance for projection impact. Marketing returned messaging guidance. Finance returned a directional impact assessment but finance simulation tooling errored: `delta Field required`.
+
 ## Observations about the founder / company
 - Founder prefers direct end-to-end handling with clear cascade visibility, not just recommendations.
 

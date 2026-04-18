@@ -18,6 +18,11 @@ dependencies = [
   # .env loader used by orchestrator/bootstrap.py. Also transitive via
   # openharness-ai, but we import it directly.
   "python-dotenv>=1.0",
+  # Dashboard backend. Starlette + uvicorn are already pulled in as
+  # transitives of ``mcp``, but we depend on them directly to keep the
+  # floor explicit for ``dashboard.server``.
+  "starlette>=0.37",
+  "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]
@@ -32,7 +37,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["orchestrator*", "tools*"]
+include = ["orchestrator*", "tools*", "dashboard_backend*"]
 
 [tool.ruff]
 line-length = 100

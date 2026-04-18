@@ -36,6 +36,11 @@ import json
 import logging
 import os
 import sys
+import threading
+import time
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import mcp.types as types
@@ -49,6 +54,42 @@ from .spec import ToolRegistry, ToolSpec
 from .tools import all_tools
 
 logger = logging.getLogger("gooning.mock_mcp")
+
+
+# ---------------------------------------------------------------------------
+# Cascade trace JSONL
+# ---------------------------------------------------------------------------
+#
+# Every tool call and its result is appended to a JSONL file so the dashboard
+# can show a live feed of cross-agent activity. The file path is controlled
+# by ``$GOONING_CASCADE_TRACE`` and defaults to
+# ``<repo_root>/state/cascade-trace.jsonl``. The writer is process-local
+# (threading.Lock) — we only run one MCP process at a time.
+
+_trace_lock = threading.Lock()
+
+
+def _cascade_trace_path() -> Path | None:
+    override = os.environ.get("GOONING_CASCADE_TRACE", "").strip()
+    if override:
+        return Path(override)
+    repo_root = Path(__file__).resolve().parents[2]
+    return repo_root / "state" / "cascade-trace.jsonl"
+
+
+def _append_trace(event: dict[str, Any]) -> None:
+    path = _cascade_trace_path()
+    if path is None:
+        return
+    event.setdefault("ts", datetime.now(timezone.utc).isoformat(timespec="milliseconds"))
+    line = json.dumps(event, ensure_ascii=False)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with _trace_lock:
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+    except OSError as exc:
+        logger.warning("failed to write cascade trace: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -149,9 +190,38 @@ def _build_mcp_server(reg: ToolRegistry) -> Server:
             )
 
         logger.info("call_tool name=%s caller=%s args=%s", name, caller, arguments)
-        result = await spec.handler(arguments or {})
+        call_id = uuid.uuid4().hex[:8]
+        started = time.monotonic()
+        _append_trace({
+            "event": "tool_call",
+            "call_id": call_id,
+            "tool": name,
+            "caller": caller,
+            "args": arguments or {},
+        })
+        try:
+            result = await spec.handler(arguments or {})
+        except Exception as exc:  # noqa: BLE001 — surface every failure to the feed
+            _append_trace({
+                "event": "tool_error",
+                "call_id": call_id,
+                "tool": name,
+                "caller": caller,
+                "error": repr(exc),
+                "elapsed_ms": int((time.monotonic() - started) * 1000),
+            })
+            raise
         if not isinstance(result, dict):
             raise TypeError(f"tool {name!r} handler returned non-dict: {type(result).__name__}")
+        _append_trace({
+            "event": "tool_result",
+            "call_id": call_id,
+            "tool": name,
+            "caller": caller,
+            "ok": bool(result.get("ok", True)),
+            "result": result,
+            "elapsed_ms": int((time.monotonic() - started) * 1000),
+        })
         return result
 
     return mcp_server
