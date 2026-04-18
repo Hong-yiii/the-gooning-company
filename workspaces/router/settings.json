@@ -1,12 +1,8 @@
 {
-  "_comment": "Workspace settings for the-gooning-company (router). Orchestrator merges workspaces/_shared/mcp.json in at launch; DO NOT copy that here.",
-
-  "model": {
-    "_comment": "TODO(glue): set provider/model. Keep this OUT of git if provider config is sensitive. Prefer env vars resolved at launch time."
-  },
+  "_comment_purpose": "Per-agent intent file. The LIVE settings the harness reads are composed by orchestrator/bootstrap.py into state/.openharness/settings.json (OPENHARNESS_CONFIG_DIR). OpenHarness does not auto-merge this file; only the path_rules below are consumed by the orchestrator and unioned into the composed settings.",
+  "_comment_role": "Router (the-gooning-company). Reads roadmap, reads every god.md for observability, never mutates roadmap — that's product's job.",
 
   "permissions": {
-    "_comment": "path_rules restrict where the agent may read/write. Router should be able to read roadmap + every god.md (observability), but should NOT mutate roadmap.",
     "path_rules": [
       { "pattern": "state/roadmap.*", "mode": "read" },
       { "pattern": "state/cascade-trace.jsonl", "mode": "append" },
@@ -14,7 +10,6 @@
     ]
   },
 
-  "tools": {
-    "_comment": "TODO(glue): enable SendMessage + any router.* MCP tools. Domain tools (product.*, marketing.*, finance.*) are NOT exposed here."
-  }
+  "_tools_intent": "Router needs the builtin agent-tool (to delegate to product/marketing/finance AgentDefinitions) plus roadmap.read_* and any router.* MCP tools. Domain tools (product.*, marketing.*, finance.*) should NOT be called directly by the router. Tool-level gating is enforced client-side via AgentDefinition.tools for teammates; the router can see all tools currently.",
+  "_model_intent": "Inherits $GOONING_MODEL (default gpt-5.4) from the composed settings.json via OPENHARNESS_CONFIG_DIR."
 }

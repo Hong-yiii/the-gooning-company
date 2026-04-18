@@ -1,9 +1,6 @@
 {
-  "_comment": "Workspace settings for marketing. Read-only on roadmap; writes only to its own memory.",
-
-  "model": {
-    "_comment": "TODO(glue): set provider/model."
-  },
+  "_comment_purpose": "Per-agent intent file. The LIVE settings the harness reads are composed by orchestrator/bootstrap.py into state/.openharness/settings.json (OPENHARNESS_CONFIG_DIR). Only the path_rules below are consumed by the orchestrator.",
+  "_comment_role": "Marketing. Reads roadmap; writes only to its own memory.",
 
   "permissions": {
     "path_rules": [
@@ -13,7 +10,6 @@
     ]
   },
 
-  "tools": {
-    "_comment": "TODO(glue): enable marketing.* and roadmap.read_*. Do NOT expose product.* or finance.*."
-  }
+  "_tools_intent": "marketing.* and roadmap.read_* from the mock MCP server. NOT product.* or finance.*.",
+  "_model_intent": "Inherits $GOONING_MODEL via AgentDefinition `model: inherit`."
 }

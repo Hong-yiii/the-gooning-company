@@ -2,10 +2,14 @@
 
 This is the operational guide. If you want the product pitch, read [`README.md`](README.md); if you want the concepts, read [`AGENTS.md`](AGENTS.md) and [`dev-concepts/`](dev-concepts/README.md).
 
-Two things are true at the same time:
+One command — `python -m orchestrator.launch` — boots the whole system once you have `.env` filled in:
 
-1. The **scaffold runs today** with only Python — you can inspect the MCP tool surface and the orchestrator's resolved config without installing OpenHarness or touching any API keys.
-2. The **full agent loop** needs a few `TODO(glue)` wires to land first (transport pick, model/provider config, OpenHarness spawn calls). Those are called out below with the exact files that need editing.
+1. Loads `.env` (OpenAI key + model).
+2. Writes `state/.openharness/settings.json` + `state/.openharness/agents/{product,marketing,finance}.md` and points `$OPENHARNESS_CONFIG_DIR` at that dir so OpenHarness reads our config instead of `~/.openharness`.
+3. Starts the mock MCP server as a subprocess (Streamable-HTTP on `127.0.0.1:8765/mcp`).
+4. Launches `ohmo --workspace workspaces/router` interactive against that config. The router can delegate to `product` / `marketing` / `finance` by name via the builtin `agent` tool.
+
+Two smoke paths that run without an API key and without OpenHarness-level plumbing are still documented in §3 — use them to confirm the scaffold is intact before you hit OpenAI.
 
 ---
 
@@ -30,22 +34,40 @@ ls -la workspaces/router/user.md  # should print ... -> ../_shared/user.md
 
 ## 2. First-time setup
 
+Using [`uv`](https://github.com/astral-sh/uv) (recommended):
+
 ```bash
 git clone <this repo>
 cd the-gooning-company
 
+uv venv --python 3.11 .venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+```
+
+Or with stdlib tooling:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
-
 pip install -e ".[dev]"
 ```
 
 What this installs:
 
-- `openharness-ai>=0.1.6,<0.2` — the harness (pin is loose on purpose; tighten once we have a known-good release).
+- `openharness-ai>=0.1.6,<0.2` — the harness. Ships `oh` + `ohmo` CLIs.
+- `mcp>=1.8,<2` — MCP Python SDK, used by the mock server (`FastMCP` + streamable-http).
+- `python-dotenv` — loads `.env` at orchestrator startup.
 - `pytest` + `ruff` — the `dev` extra.
 
-> If the `openharness-ai` pip name is stale, confirm the current package name at [HKUDS/OpenHarness README](https://github.com/HKUDS/OpenHarness/blob/main/README.md) and update `pyproject.toml`. No guessing.
+Then copy the env template and fill in your OpenAI key:
+
+```bash
+cp .env.example .env
+# edit .env and set OPENAI_API_KEY (rotate regularly; never commit)
+```
+
+`.env` is gitignored. The orchestrator reads it before any OpenHarness code touches `os.environ`.
 
 ---
 
@@ -84,21 +106,31 @@ If either command prints `preflight failed`, see §7.
 
 ## 4. The full picture of what you'll run
 
-Once glue lands (§6), one command starts the whole system:
-
 ```bash
-python3 -m orchestrator.launch
+python -m orchestrator.launch
 ```
 
 That command:
 
-1. Reads every `workspaces/<role>/` into a typed config.
-2. Preflights that `soul.md`, `identity.md`, `BOOTSTRAP.md`, and `state/roadmap.md` exist.
-3. Starts the mock MCP server as a subprocess.
-4. Spawns `product`, `marketing`, `finance` as swarm teammates under the router (via `openharness.swarm.SubprocessBackend`).
-5. Runs the router (`the-gooning-company`) as the founder-facing ohmo session.
+1. Loads `.env`; refuses to start if `OPENAI_API_KEY` is unset.
+2. Reads every `workspaces/<role>/` into a typed config.
+3. Preflights that `soul.md`, `identity.md`, `BOOTSTRAP.md`, and `state/roadmap.md` exist.
+4. Writes `state/.openharness/settings.json` (provider profile + mcp_servers + path rules) and `state/.openharness/agents/{product,marketing,finance}.md` (AgentDefinition per teammate, body = shared base-system + role soul + role identity + role `memory/god.md`).
+5. Points `$OPENHARNESS_CONFIG_DIR` at `state/.openharness/` so OpenHarness/ohmo load the generated config instead of `~/.openharness/`.
+6. Starts the mock MCP server as a subprocess on `127.0.0.1:8765/mcp` (Streamable HTTP).
+7. Execs `ohmo --workspace workspaces/router --profile gooning-openai --model $GOONING_MODEL` — that's your founder-facing interactive session.
 
-You talk to the router. It talks to the teammates. Teammates talk back via the file-backed swarm mailbox. No direct peer-to-peer.
+Delegation: the router's built-in `agent` tool can spawn `product` / `marketing` / `finance` by name. Each delegation is a **fresh subprocess** (upstream `SubprocessBackend.spawn` → `create_agent_task`) whose system prompt is the full AgentDefinition body — so god.md is re-read every time. Teammates never message each other; every cross-domain effect goes back through the router.
+
+Useful modifiers:
+
+```bash
+python -m orchestrator.launch --describe          # dump resolved config, exit
+python -m orchestrator.launch --dump-settings     # show per-agent settings (with shared MCP merged)
+python -m orchestrator.launch --dump-composed     # write state/.openharness/ and show paths, exit
+python -m orchestrator.launch --no-router         # bootstrap + MCP only; keep MCP up, ^C to stop
+python -m orchestrator.launch --print "summarise the roadmap"  # non-interactive, one-shot to the router
+```
 
 ---
 
@@ -124,24 +156,23 @@ Fill the `TODO` block at the bottom: company one-liner, top 3 strategic prioriti
 
 Each of `router`, `product`, `marketing`, `finance` has its own `soul.md` with a `TODO` section listing the contract decisions that role still owes (delta envelope, campaign outcome envelope, projection envelope, etc.).
 
-### 5.4 Per-agent `settings.json` — model / provider
+### 5.4 Provider and model — `.env`
 
-Open each `workspaces/<role>/settings.json`. The `"model"` block is an explicit `TODO(glue)` placeholder:
+Model + API key live in `.env`, not in any committed file:
 
-```json
-"model": {
-  "_comment": "TODO(glue): set provider/model..."
-}
+```bash
+OPENAI_API_KEY=sk-...            # required; rotate regularly
+GOONING_MODEL=gpt-5.4            # any OpenAI-served model id
+OPENAI_BASE_URL=https://api.openai.com/v1   # override for Azure/OpenRouter/etc.
+GOONING_MCP_HOST=127.0.0.1
+GOONING_MCP_PORT=8765
 ```
 
-What to put there depends on which provider OpenHarness hands you. For the hackathon, prefer:
+The orchestrator composes a single `gooning-openai` provider profile from these values and writes it to `state/.openharness/settings.json`. If you need a non-OpenAI provider, edit `orchestrator/bootstrap.py::_build_settings` — there's one entry point for this.
 
-- **API key via environment variable**, not in the file. e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`.
-- **Model id** in the file (`"provider": "openai", "model": "gpt-4o-mini"` etc. — match the actual OpenHarness schema).
+The per-workspace `workspaces/<role>/settings.json` files are **intent documentation** now, not live config. Only their `permissions.path_rules` get merged into the composed settings; `model` / `tools` fields are unused (OpenHarness's `load_settings()` only reads `$OPENHARNESS_CONFIG_DIR/settings.json`).
 
-Check the current settings schema at [HKUDS/OpenHarness `src/openharness/mcp/config.py`](https://github.com/HKUDS/OpenHarness/blob/main/src/openharness/mcp/config.py) and upstream docs before copy-pasting.
-
-Secrets never go into `settings.json` or `gateway.json`. The repo-root `.gitignore` already ignores `**/.credentials*`, `**/auth.json`, `**/*.secret`, `**/*.token` defensively, but don't rely on it — keep keys in your shell environment.
+Secrets never go into any committed file. `.gitignore` already covers `.env`, `**/.credentials*`, `**/auth.json`, `**/*.secret`, `**/*.token`.
 
 ### 5.5 Shared MCP URL — `workspaces/_shared/mcp.json`
 
@@ -151,58 +182,63 @@ Default is `http://127.0.0.1:8765/mcp`. You only need to change this if you run 
 
 Seed it with one or two real rows before you launch, so the agents have something to read on first turn. Only the `product` agent will mutate it afterward.
 
-### 5.7 Provider credentials — **never** in the repo
-
-Put these in your shell before running the orchestrator:
-
-```bash
-export OPENAI_API_KEY=...
-# or
-export ANTHROPIC_API_KEY=...
-```
-
-If a teammate claims they committed a key, see §7.4.
-
 ---
 
-## 6. TODO(glue) — what needs to land before `python3 -m orchestrator.launch` actually boots agents
+## 6. How the boot actually works
 
-The scaffold is intentionally one step short of running agents, so the wiring decisions happen in visible PRs. The three remaining glue points:
+The glue used to be three separate `TODO(glue)` wires. They're landed. Here's the current control flow so you can debug it when it breaks:
 
-### 6.1 Mock MCP transport — `tools/mock_mcp/server.py`
+### 6.1 `.env` → orchestrator → OpenHarness config
 
-- Pick the HTTP stack (`fastmcp` / `aiohttp` / `starlette`).
-- Add it to `[project.optional-dependencies].mcp` in `pyproject.toml`.
-- In `server.py`'s `main()`, iterate `reg.tools` and register each with the framework. Enforce `allowed_callers` before invoking `handler`.
-- Bind to the URL from `workspaces/_shared/mcp.json`.
+`orchestrator/launch.py` calls `orchestrator.bootstrap.run_bootstrap(cfg)` before it touches OpenHarness. That function:
 
-### 6.2 Teammate spawn — `orchestrator/launch.py`, function `_spawn_teammates`
+1. Calls `dotenv.load_dotenv(repo_root / ".env", override=False)`.
+2. Reads `OPENAI_API_KEY`, `GOONING_MODEL`, `OPENAI_BASE_URL`, `GOONING_MCP_{HOST,PORT}`.
+3. Composes a `settings.json` dict: one provider profile (`gooning-openai`), one MCP server entry pointing at the mock server URL (`x-agent` header templated per caller), and a `permissions.path_rules` section unioned across every workspace's `settings.json`.
+4. Writes `state/.openharness/settings.json` and sets `os.environ["OPENHARNESS_CONFIG_DIR"]` to that directory. Upstream `load_settings()` only reads `$OPENHARNESS_CONFIG_DIR/settings.json` — nothing else is consulted.
 
-The function already has the call shape in a docstring. Replace the `print` with:
+### 6.2 AgentDefinition files — `state/.openharness/agents/{product,marketing,finance}.md`
 
-```python
-from openharness.swarm import SubprocessBackend, TeammateSpawnConfig, TeammateIdentity
+Upstream's `AgentRegistry` globs `$OPENHARNESS_CONFIG_DIR/agents/*.md` and parses YAML frontmatter + markdown body into `AgentDefinition`. The body becomes the system prompt for any delegation to that agent.
 
-backend = SubprocessBackend(...)
-for a in cfg.teammates():
-    backend.spawn(
-        TeammateSpawnConfig(
-            identity=TeammateIdentity(id=a.teammate_id, display_name=a.name),
-            workspace=a.workspace,
-            extra_prompt=cfg.shared_prompt_path.read_text(),
-            extra_skill_dirs=[cfg.shared_skills_dir],
-            settings_override=_effective_settings(cfg, a),
-        )
-    )
+`bootstrap._compose_agent_md` builds each file as:
+
+```
+---
+name: product
+description: Product / UX agent...
+model: inherit
+color: cyan
+---
+
+<contents of workspaces/_shared/base-system.md, H1 stripped>
+
+<contents of workspaces/product/soul.md, H1 stripped>
+
+<contents of workspaces/product/identity.md, H1 stripped>
+
+<contents of workspaces/product/memory/god.md, H1 stripped>
 ```
 
-Confirm argument names against the pinned OpenHarness version — the shape above reflects the current upstream, not a guess.
+Each delegation is a fresh subprocess — the god.md is read at spawn time, so edits between turns take effect on the next delegation.
 
-### 6.3 Router session — `orchestrator/launch.py`, function `_run_router`
+### 6.3 Mock MCP server — `tools/mock_mcp/server.py`
 
-Replace the `print` with `ohmo.runtime.run_ohmo_backend(...)`, passing the same `extra_prompt`, `extra_skill_dirs`, and merged settings for the router workspace.
+`mcp.server.lowlevel.Server` + `StreamableHTTPSessionManager` serve the tool surface on `http://127.0.0.1:8765/mcp`.
 
-Once 6.1–6.3 are in, the command in §4 boots the whole system.
+- Tool listing, invocation, and JSON-schema introspection go through the low-level server's `list_tools` / `call_tool` decorators.
+- Each request's `x-agent` HTTP header is read via the Starlette request context to attribute the call.
+- `allowed_callers` is enforced **softly** by default (warning log on mismatch). Set `GOONING_STRICT_CALLERS=1` to flip to hard denial (raises `PermissionError`, surfaces as an MCP tool error to the caller).
+
+### 6.4 Router session
+
+After bootstrap + MCP startup, `launch.py` execs:
+
+```
+ohmo --workspace workspaces/router --profile gooning-openai --model $GOONING_MODEL
+```
+
+with `OPENHARNESS_CONFIG_DIR` and `OPENAI_API_KEY` inherited. Interactive founder chat runs here. Delegation uses the builtin `agent` tool — e.g. `agent(name="product", task="propose a roadmap delta …")`. Each call is a `SubprocessBackend.spawn(...)` that loads the AgentDefinition for that name, runs the teammate in its own subprocess, and streams the final reply back to the router.
 
 ---
 
@@ -219,6 +255,18 @@ Once 6.1–6.3 are in, the command in §4 boots the whole system.
 ### 7.3 `pip install -e ".[dev]"` fails on `openharness-ai`
 
 Likely the package name on PyPI has changed, or the version range is wrong. Check the upstream README. Update `pyproject.toml` → `dependencies`. Don't bypass it with a local clone unless you have a specific reason (see [`dev-concepts/implementation.md`](dev-concepts/implementation.md) §5 on forking).
+
+### 7.3a `OPENAI_API_KEY not set` on `python -m orchestrator.launch`
+
+`.env` either doesn't exist or doesn't have the key. Copy `.env.example`, fill it in, rerun. Don't `export` it in your shell instead of using `.env` — the orchestrator intentionally reads the dotfile so both the launcher and the MCP subprocess and the `ohmo` subprocess all see the same value.
+
+### 7.3b `ohmo: command not found`
+
+You're not in the venv, or `openharness-ai` didn't install its console scripts. Activate the venv (`source .venv/bin/activate`) and rerun `uv pip install -e ".[dev]"`. Confirm with `which ohmo` — it should resolve inside `.venv/bin/`.
+
+### 7.3c MCP tool calls fail with `caller 'unknown' not allowed for tool …`
+
+Only happens when `GOONING_STRICT_CALLERS=1`. The `x-agent` header isn't being propagated by the MCP client — check that `state/.openharness/settings.json`'s `mcp_servers.gooning_mock.headers` includes `x-agent`. Fall back to soft mode (`unset GOONING_STRICT_CALLERS`) while debugging.
 
 ### 7.4 I think I committed a key
 

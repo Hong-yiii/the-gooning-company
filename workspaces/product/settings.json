@@ -1,9 +1,6 @@
 {
-  "_comment": "Workspace settings for product. Only this agent may write state/roadmap.*.",
-
-  "model": {
-    "_comment": "TODO(glue): set provider/model."
-  },
+  "_comment_purpose": "Per-agent intent file. The LIVE settings the harness reads are composed by orchestrator/bootstrap.py into state/.openharness/settings.json (OPENHARNESS_CONFIG_DIR). Only the path_rules below are consumed by the orchestrator.",
+  "_comment_role": "Product / UX. Sole writer of state/roadmap.*.",
 
   "permissions": {
     "path_rules": [
@@ -13,7 +10,6 @@
     ]
   },
 
-  "tools": {
-    "_comment": "TODO(glue): enable product.* and roadmap.* namespaces of the mock MCP server. Do NOT expose marketing.* or finance.*."
-  }
+  "_tools_intent": "product.* and roadmap.* (read + write) from the mock MCP server. NOT marketing.* or finance.*.",
+  "_model_intent": "Inherits $GOONING_MODEL via AgentDefinition `model: inherit`."
 }

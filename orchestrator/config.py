@@ -111,8 +111,11 @@ def merge_mcp_into_settings(
     Shared entries do not overwrite an agent's already-defined server of the
     same id, on the assumption that an agent overriding locally meant it.
 
-    TODO(glue): confirm the final key name once the harness version is pinned
-    (``mcp_servers`` vs ``mcp`` — check upstream ``src/openharness/mcp/config.py``).
+    Note: upstream's canonical key is ``mcp_servers`` (see
+    ``openharness/config/settings.py::Settings.mcp_servers``); the legacy
+    ``mcp`` key is not honoured. This function is only used by
+    ``--dump-settings`` for inspection; the live launch path composes
+    settings from ``orchestrator/bootstrap.py`` and does not go through here.
     """
 
     merged = dict(per_agent_settings)
