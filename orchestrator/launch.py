@@ -32,11 +32,13 @@ Flow:
 from __future__ import annotations
 
 import argparse
+import atexit
 import json
 import os
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -100,7 +102,10 @@ def _start_mock_mcp(cfg: OrchestratorConfig) -> subprocess.Popen[bytes]:
     port = os.environ.get("GOONING_MCP_PORT", "8765")
     cmd = [py, "-m", MCP_MODULE, "--host", host, "--port", port]
     print(f"[orchestrator] starting mock MCP: {' '.join(cmd)}")
-    proc = subprocess.Popen(cmd, cwd=cfg.repo_root)
+    # start_new_session puts the child in its own process group + session,
+    # so we can reliably kill the whole subtree (uvicorn + any workers)
+    # with a single signal without leaking to the parent's terminal.
+    proc = subprocess.Popen(cmd, cwd=cfg.repo_root, start_new_session=True)
 
     # Tiny ready probe — give the HTTP server a moment to bind. Not a
     # liveness check; just enough that the router's first tool call doesn't
@@ -117,11 +122,90 @@ def _start_mock_mcp(cfg: OrchestratorConfig) -> subprocess.Popen[bytes]:
 def _stop_mock_mcp(proc: subprocess.Popen[bytes] | None) -> None:
     if proc is None or proc.poll() is not None:
         return
-    proc.send_signal(signal.SIGINT)
+    # Kill the entire process group we created in _start_mock_mcp — covers
+    # uvicorn's worker layout and any future multi-process transports.
+    pgid: int | None
+    try:
+        pgid = os.getpgid(proc.pid)
+    except (ProcessLookupError, OSError):
+        pgid = None
+
+    def _signal(sig: signal.Signals) -> None:
+        try:
+            if pgid is not None:
+                os.killpg(pgid, sig)
+            else:
+                proc.send_signal(sig)
+        except (ProcessLookupError, OSError):
+            pass
+
+    _signal(signal.SIGINT)
     try:
         proc.wait(timeout=3)
+        return
     except subprocess.TimeoutExpired:
-        proc.kill()
+        pass
+    _signal(signal.SIGTERM)
+    try:
+        proc.wait(timeout=2)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    _signal(signal.SIGKILL)
+    try:
+        proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def _install_signal_handlers(mcp_proc_ref: list[subprocess.Popen[bytes] | None]) -> None:
+    """Ensure the MCP child is torn down on any signal or interpreter exit.
+
+    The parent of `orchestrator.launch` may be a shell (e.g. when the user
+    runs ``source .venv/bin/activate && python -m orchestrator.launch``).
+    A SIGINT/SIGTERM to that shell can kill the Python process without
+    giving the normal ``try/finally`` in :func:`main` a chance to run.
+    Signal handlers + ``atexit`` make sure the MCP child dies in every
+    exit path we can see from Python.
+    """
+
+    def _cleanup() -> None:
+        _stop_mock_mcp(mcp_proc_ref[0])
+
+    atexit.register(_cleanup)
+
+    def _handler(signum: int, _frame: Any) -> None:
+        _cleanup()
+        # Restore default and re-raise so the caller sees the expected
+        # exit status (e.g. 130 for SIGINT).
+        signal.signal(signum, signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        try:
+            signal.signal(sig, _handler)
+        except (ValueError, OSError):
+            pass
+
+    # Parent-death watchdog. If our parent (typically a shell or the user's
+    # terminal) is killed, macOS reparents us to launchd (pid 1) instead of
+    # delivering a signal we can catch. Poll getppid(); on reparent, clean
+    # up and exit. Cheap (1 Hz syscall) and daemonised so it never blocks
+    # normal shutdown.
+    original_ppid = os.getppid()
+
+    def _ppid_watchdog() -> None:
+        while True:
+            time.sleep(1.0)
+            try:
+                cur = os.getppid()
+            except OSError:
+                return
+            if cur != original_ppid or cur == 1:
+                _cleanup()
+                os._exit(129)  # conventional "killed by SIGHUP" exit
+
+    threading.Thread(target=_ppid_watchdog, name="ppid-watchdog", daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -241,15 +325,16 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  - {p.name}")
         return 0
 
-    mcp_proc: subprocess.Popen[bytes] | None = None
+    mcp_proc_ref: list[subprocess.Popen[bytes] | None] = [None]
+    _install_signal_handlers(mcp_proc_ref)
     try:
         if not args.no_mcp:
-            mcp_proc = _start_mock_mcp(cfg)
+            mcp_proc_ref[0] = _start_mock_mcp(cfg)
 
         if args.no_router:
             print("[orchestrator] --no-router: skipping router launch. ^C to stop MCP.")
-            if mcp_proc is not None:
-                mcp_proc.wait()
+            if mcp_proc_ref[0] is not None:
+                mcp_proc_ref[0].wait()
             return 0
 
         router_extra: list[str] = list(extra)
@@ -258,7 +343,7 @@ def main(argv: list[str] | None = None) -> int:
 
         return _run_router(cfg, bootstrap, extra_args=router_extra)
     finally:
-        _stop_mock_mcp(mcp_proc)
+        _stop_mock_mcp(mcp_proc_ref[0])
 
 
 if __name__ == "__main__":
