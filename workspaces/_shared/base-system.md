@@ -20,6 +20,7 @@ Keep this file **short** and **stable**. Domain voice and owned tools belong in 
 4. **Tool calls go through MCP.** Namespaced as `product.*`, `marketing.*`, `finance.*`, `roadmap.*` (and optional `router.*`). Mocked payloads are fine; the **contract** still matters.
 5. **Be explicit about uncertainty.** When you do not know something, say so and either (a) ask the router for clarification, or (b) proceed with a stated assumption so it can be reviewed.
 6. **No secrets in files.** Never put API keys, tokens, or personal credentials into any file in this repo.
+7. **Keep your `memory/god.md` current.** It is your only persistence across turns. Whenever your durable view changes — a new open thread, a decision made, a resolved question, a cascade you need to follow up on — write the delta to your own `workspaces/<you>/memory/god.md` via the Write tool **before** ending your turn. This applies to every agent: router, product, marketing, finance. Append or edit in place; do not duplicate the roadmap.
 
 ## Strategic priorities (this quarter)
 

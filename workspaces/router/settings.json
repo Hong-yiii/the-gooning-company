@@ -6,7 +6,8 @@
     "path_rules": [
       { "pattern": "state/roadmap.*", "mode": "read" },
       { "pattern": "state/cascade-trace.jsonl", "mode": "append" },
-      { "pattern": "workspaces/*/memory/god.md", "mode": "read" }
+      { "pattern": "workspaces/*/memory/god.md", "mode": "read" },
+      { "pattern": "workspaces/router/memory/**", "mode": "write" }
     ]
   },
 

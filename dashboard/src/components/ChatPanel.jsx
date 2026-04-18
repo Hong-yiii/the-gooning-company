@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { sendMessage } from '../api/index'
 import styles from './ChatPanel.module.css'
 
@@ -9,10 +10,11 @@ const WELCOME = {
   timestamp: new Date(),
 }
 
-export default function ChatPanel() {
+export default function ChatPanel({ liveCascade }) {
   const [messages, setMessages] = useState([WELCOME])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
+  const [turnStartTs, setTurnStartTs] = useState(null)
   const [conversationId] = useState(() => crypto.randomUUID())
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
@@ -25,13 +27,22 @@ export default function ChatPanel() {
     const text = input.trim()
     if (!text || streaming) return
 
-    const userMsg = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date() }
+    const now = Date.now()
+    const userMsg = { id: crypto.randomUUID(), role: 'user', content: text, timestamp: new Date(now) }
     const assistantId = crypto.randomUUID()
-    const assistantMsg = { id: assistantId, role: 'assistant', content: '', timestamp: new Date(), pending: true }
+    const assistantMsg = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(now),
+      pending: true,
+      startedAt: now,
+    }
 
     setMessages((prev) => [...prev, userMsg, assistantMsg])
     setInput('')
     setStreaming(true)
+    setTurnStartTs(now)
 
     sendMessage(
       text,
@@ -43,20 +54,32 @@ export default function ChatPanel() {
       },
       () => {
         setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, pending: false } : m))
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, pending: false, finishedAt: Date.now() }
+              : m
+          )
         )
         setStreaming(false)
+        setTurnStartTs(null)
         inputRef.current?.focus()
       },
       (err) => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: 'Something went wrong. Try again.', pending: false, error: true }
+              ? {
+                  ...m,
+                  content: m.content || 'Something went wrong. Try again.',
+                  pending: false,
+                  error: true,
+                  finishedAt: Date.now(),
+                }
               : m
           )
         )
         setStreaming(false)
+        setTurnStartTs(null)
       }
     )
   }
@@ -74,16 +97,35 @@ export default function ChatPanel() {
     }
   }
 
+  // Tool calls that happened during the current turn only.
+  const turnActivity = useMemo(() => {
+    if (!turnStartTs || !liveCascade) return []
+    return liveCascade.filter((ev) => {
+      const t = new Date(ev.ts || 0).getTime()
+      return t >= turnStartTs - 250 // small slack for clock skew
+    })
+  }, [liveCascade, turnStartTs])
+
   return (
     <div className={styles.panel}>
       <div className={styles.panelHeader}>
         <span className={styles.panelTitle}>Coordinator</span>
         <span className={styles.panelSubtitle}>router agent</span>
+        {streaming && (
+          <span className={styles.headerThinking} title="router is working">
+            <span className={styles.headerDot} />
+            thinking
+          </span>
+        )}
       </div>
 
       <div className={styles.messages}>
         {messages.map((msg) => (
-          <Message key={msg.id} message={msg} />
+          <Message
+            key={msg.id}
+            message={msg}
+            activity={msg.pending ? turnActivity : null}
+          />
         ))}
         <div ref={bottomRef} />
       </div>
@@ -115,68 +157,207 @@ export default function ChatPanel() {
   )
 }
 
-function Message({ message }) {
+function Message({ message, activity }) {
   const isUser = message.role === 'user'
-  const lines = message.content.split('\n')
+  const isAssistant = !isUser
 
   return (
     <div className={`${styles.message} ${isUser ? styles.messageUser : styles.messageAssistant}`}>
-      {!isUser && (
+      {isAssistant && (
         <div className={styles.agentLabel}>
           <div className={styles.agentAvatar} />
           <span>coordinator</span>
         </div>
       )}
-      <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleAssistant}`}>
-        <FormattedContent content={message.content} pending={message.pending} />
+      <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleAssistant} ${message.error ? styles.bubbleError : ''}`}>
+        <BubbleContent
+          content={message.content}
+          pending={message.pending}
+          startedAt={message.startedAt}
+          activity={activity}
+        />
       </div>
       <span className={styles.timestamp}>{formatTime(message.timestamp)}</span>
     </div>
   )
 }
 
-function FormattedContent({ content, pending }) {
-  if (!content && pending) {
-    return (
-      <span className={styles.thinkingDots}>
-        <span />
-        <span />
-        <span />
-      </span>
-    )
-  }
+function BubbleContent({ content, pending, startedAt, activity }) {
+  const hasContent = Boolean(content && content.trim())
 
-  const segments = parseInlineMarkdown(content)
   return (
-    <p className={styles.messageText}>
-      {segments}
-      {pending && <span className={styles.cursor} />}
-    </p>
+    <>
+      {!hasContent && pending ? (
+        <InFlightIndicator startedAt={startedAt} activity={activity} />
+      ) : (
+        <div className={styles.messageBody}>
+          <MessageMarkdown text={content} />
+          {pending && <span className={styles.cursor} />}
+        </div>
+      )}
+      {/* Tool chips continue to show while still streaming, under the text. */}
+      {hasContent && pending && activity && activity.length > 0 && (
+        <ActivityStrip activity={activity} compact />
+      )}
+    </>
   )
 }
 
-function parseInlineMarkdown(text) {
-  const parts = []
-  const regex = /\*\*(.+?)\*\*|_(.+?)_|\*(.+?)\*/g
-  let last = 0
-  let match
-  let key = 0
+// ─── In-flight indicator ─────────────────────────────────────────────────────
 
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > last) {
-      parts.push(<span key={key++}>{text.slice(last, match.index)}</span>)
+const PHASES = [
+  { until: 3, label: 'routing intent' },
+  { until: 8, label: 'consulting model' },
+  { until: 18, label: 'calling tools' },
+  { until: 45, label: 'composing reply' },
+  { until: Infinity, label: 'still working' },
+]
+
+function InFlightIndicator({ startedAt, activity }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(id)
+  }, [])
+
+  const elapsedMs = Math.max(0, now - (startedAt || now))
+  const elapsedS = elapsedMs / 1000
+  const phase = PHASES.find((p) => elapsedS < p.until)?.label ?? 'working'
+
+  return (
+    <div className={styles.inflight}>
+      <div className={styles.inflightHeader}>
+        <Spinner />
+        <span className={styles.inflightPhase}>{phase}</span>
+        <span className={styles.inflightElapsed}>
+          {elapsedS < 10 ? elapsedS.toFixed(1) : Math.floor(elapsedS)}s
+        </span>
+      </div>
+      <div className={styles.inflightBar}>
+        <div className={styles.inflightBarFill} />
+      </div>
+      {activity && activity.length > 0 && (
+        <ActivityStrip activity={activity} />
+      )}
+    </div>
+  )
+}
+
+function ActivityStrip({ activity, compact }) {
+  // De-dup: show the latest event per (tool+call_id) pair so a tool_call that
+  // later becomes tool_result collapses into a single row with ✓ + elapsed.
+  const rows = summariseActivity(activity).slice(-4)
+  if (rows.length === 0) return null
+
+  return (
+    <ul className={`${styles.activityList} ${compact ? styles.activityCompact : ''}`}>
+      {rows.map((row) => (
+        <li key={row.key} className={`${styles.activityRow} ${row.ok === false ? styles.activityErr : ''}`}>
+          <span className={styles.activityArrow}>{row.symbol}</span>
+          <span className={styles.activityTool}>{row.tool}</span>
+          {row.elapsed != null && (
+            <span className={styles.activityElapsed}>{row.elapsed}ms</span>
+          )}
+          {row.note && <span className={styles.activityNote}>{row.note}</span>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function summariseActivity(events) {
+  const byKey = new Map()
+  for (const ev of events) {
+    const key = ev.call_id || `${ev.tool}|${ev.ts}`
+    const prev = byKey.get(key) || { key, tool: ev.tool, note: null }
+    if (ev.event === 'tool_call') {
+      byKey.set(key, { ...prev, symbol: '→', ok: null })
+    } else if (ev.event === 'tool_result') {
+      byKey.set(key, {
+        ...prev,
+        symbol: '✓',
+        ok: true,
+        elapsed: ev.elapsed_ms ?? prev.elapsed,
+        note: noteFromResult(ev.result) ?? prev.note,
+      })
+    } else if (ev.event === 'tool_error') {
+      byKey.set(key, {
+        ...prev,
+        symbol: '✗',
+        ok: false,
+        elapsed: ev.elapsed_ms ?? prev.elapsed,
+        note: truncate(ev.error, 48),
+      })
     }
-    if (match[1]) parts.push(<strong key={key++}>{match[1]}</strong>)
-    else if (match[2]) parts.push(<em key={key++}>{match[2]}</em>)
-    else if (match[3]) parts.push(<em key={key++}>{match[3]}</em>)
-    last = regex.lastIndex
   }
+  return Array.from(byKey.values())
+}
 
-  if (last < text.length) {
-    parts.push(<span key={key++}>{text.slice(last)}</span>)
-  }
+function noteFromResult(result) {
+  if (!result || typeof result !== 'object') return null
+  const n = result.note || result.detail || result.message
+  return n ? truncate(n, 48) : null
+}
 
-  return parts.length ? parts : text
+function truncate(s, n) {
+  if (!s) return ''
+  const str = String(s)
+  return str.length > n ? str.slice(0, n - 1) + '…' : str
+}
+
+// ─── Markdown renderer for chat bubbles ──────────────────────────────────────
+
+const MD_COMPONENTS = {
+  p: ({ node, ...props }) => <p className={styles.mdPara} {...props} />,
+  strong: ({ node, ...props }) => <strong className={styles.mdStrong} {...props} />,
+  em: ({ node, ...props }) => <em className={styles.mdEm} {...props} />,
+  code: ({ node, inline, children, ...props }) =>
+    inline === false ? (
+      <pre className={styles.mdPre}>
+        <code className={styles.mdCodeBlock} {...props}>{children}</code>
+      </pre>
+    ) : (
+      <code className={styles.mdCode} {...props}>{children}</code>
+    ),
+  ul: ({ node, ...props }) => <ul className={styles.mdUl} {...props} />,
+  ol: ({ node, ...props }) => <ol className={styles.mdOl} {...props} />,
+  li: ({ node, ...props }) => <li className={styles.mdLi} {...props} />,
+  a: ({ node, ...props }) => (
+    <a className={styles.mdLink} target="_blank" rel="noreferrer" {...props} />
+  ),
+  blockquote: ({ node, ...props }) => (
+    <blockquote className={styles.mdQuote} {...props} />
+  ),
+  hr: () => <hr className={styles.mdHr} />,
+}
+
+function MessageMarkdown({ text }) {
+  return <ReactMarkdown components={MD_COMPONENTS}>{text}</ReactMarkdown>
+}
+
+// ─── Small bits ──────────────────────────────────────────────────────────────
+
+function Spinner() {
+  return (
+    <svg
+      className={styles.spinner}
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeDasharray="14 42"
+      />
+    </svg>
+  )
 }
 
 function formatTime(date) {

@@ -4,16 +4,20 @@ import { fetchGodFile, subscribeGodFile } from '../api/index'
 import styles from './GodFilesPanel.module.css'
 
 const AGENTS = [
+  { key: 'router', label: 'Router', color: styles.agentRouter },
   { key: 'product', label: 'Product', color: styles.agentProduct },
   { key: 'marketing', label: 'Marketing', color: styles.agentMarketing },
   { key: 'finance', label: 'Finance', color: styles.agentFinance },
 ]
 
+const EMPTY_BY_AGENT = Object.fromEntries(AGENTS.map(({ key }) => [key, null]))
+const FALSE_BY_AGENT = Object.fromEntries(AGENTS.map(({ key }) => [key, false]))
+
 export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
-  const [activeAgent, setActiveAgent] = useState('product')
-  const [godFiles, setGodFiles] = useState({ product: null, marketing: null, finance: null })
-  const [lastPulse, setLastPulse] = useState({ product: null, marketing: null, finance: null })
-  const [pulseActive, setPulseActive] = useState({ product: false, marketing: false, finance: false })
+  const [activeAgent, setActiveAgent] = useState('router')
+  const [godFiles, setGodFiles] = useState(EMPTY_BY_AGENT)
+  const [lastPulse, setLastPulse] = useState(EMPTY_BY_AGENT)
+  const [pulseActive, setPulseActive] = useState(FALSE_BY_AGENT)
 
   useEffect(() => {
     AGENTS.forEach(({ key }) => {

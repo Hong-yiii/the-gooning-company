@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-AGENTS = ("product", "marketing", "finance")
+AGENTS = ("router", "product", "marketing", "finance")
 
 
 @dataclass

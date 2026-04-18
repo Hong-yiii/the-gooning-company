@@ -59,7 +59,7 @@ export default function App() {
       </header>
 
       <main className={styles.main}>
-        <ChatPanel />
+        <ChatPanel liveCascade={liveCascade} />
 
         <div className={styles.centerColumn}>
           <RoadmapPanel liveColumns={liveRoadmap} />
@@ -87,7 +87,7 @@ function StreamBadge({ state }) {
 }
 
 function AgentPips({ agents }) {
-  const agentList = ['product', 'marketing', 'finance']
+  const agentList = ['router', 'product', 'marketing', 'finance']
   return (
     <div className={styles.agentPips}>
       {agentList.map((a) => (

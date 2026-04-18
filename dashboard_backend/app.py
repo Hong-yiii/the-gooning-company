@@ -145,16 +145,15 @@ def build_app(paths: DashboardPaths) -> Starlette:
 
     async def api_events(_: Request) -> StreamingResponse:
         # Single SSE stream multiplexes roadmap/god.md/cascade updates.
-        watcher = FileMtimeWatcher(
-            {
-                "roadmap": paths.roadmap_path,
-                "god:product": gods.god_path(paths.workspaces_dir, "product"),
-                "god:marketing": gods.god_path(paths.workspaces_dir, "marketing"),
-                "god:finance": gods.god_path(paths.workspaces_dir, "finance"),
-                "cascade": paths.cascade_path,
-            },
-            poll_s=0.5,
-        )
+        # Derive the god-file watch set from gods.AGENTS so the router and
+        # any future agents are observed automatically.
+        watch_paths: dict[str, Path] = {
+            "roadmap": paths.roadmap_path,
+            "cascade": paths.cascade_path,
+        }
+        for agent in gods.AGENTS:
+            watch_paths[f"god:{agent}"] = gods.god_path(paths.workspaces_dir, agent)
+        watcher = FileMtimeWatcher(watch_paths, poll_s=0.5)
 
         async def gen() -> AsyncIterator[bytes]:
             yield _sse_format("ready", {"ok": True})

@@ -125,7 +125,7 @@ export async function fetchSystemStatus() {
   } catch {
     return {
       coordinator: 'offline',
-      agents: { product: 'offline', marketing: 'offline', finance: 'offline' },
+      agents: { router: 'offline', product: 'offline', marketing: 'offline', finance: 'offline' },
     }
   }
 }
