@@ -44,7 +44,7 @@ flowchart LR
 
 - **`the-gooning-company` (router)** — Entry point for founders; routes intent, enriches context, brokers cascades. No peer-to-peer between domain agents.
 - **Product / UX** — Owns edits to the shared roadmap artifact; proposes roadmap changes that trigger downstream cascades via the router.
-- **Marketing** — Reads roadmap; owns campaigns and positioning in its `god.md`; signals that need roadmap or finance follow-up go to the router.
+- **Marketing** — Externally represented by a **Marketing Lead** who reads the roadmap, owns campaigns and positioning in Marketing’s `god.md`, and signals roadmap or finance follow-up to the router. The Marketing Lead may orchestrate internal specialist sub-agents (e.g. content, performance, brand, community, ops), but those workers remain private to the Marketing domain and never message Product, Finance, or the router directly.
 - **Finance** — Reads roadmap; owns projections and implications in its `god.md`; reacts to roadmap and marketing-relayed events via the router.
 
 ---
@@ -60,9 +60,12 @@ flowchart LR
    **Product intent:** the roadmap is **foundational** — it should read like work across **domains** (Product / Marketing / Finance), with **status** and **high-level** columns, almost a **kanban board**. In practice it **drives the company**: roadmap changes **cascade** into implications elsewhere (e.g. financial projections, campaign timing). The other direction matters too: if **Marketing** sees a gap or conflict, that should surface as a **roadmap item** (via the router to Product), so the artifact stays a **living doc** — a **decision-making panel** for founders, not a static slide.
 
 3. **Router-brokered cascade**  
-   “Automatic” cross-agent updates mean: domain agent finishes work → **router** receives outcome → router decides **who must know** → router dispatches. Example: roadmap change → router notifies Marketing and Finance with summarized deltas (downstream can spin **new projections, implications, or campaign adjustments**). Example: new marketing campaign → router notifies Finance. Marketing **does not** append to Product’s `god.md`; it may request a roadmap item via tools/messages that the router forwards to Product.
+   “Automatic” cross-agent updates mean: domain agent finishes work → **router** receives outcome → router decides **who must know** → router dispatches. Example: roadmap change → router notifies Marketing and Finance with summarized deltas (downstream can spin **new projections, implications, or campaign adjustments**). Example: new marketing campaign → router notifies Finance. Marketing **does not** append to Product’s `god.md`; it may request a roadmap item via tools/messages that the router forwards to Product. If Marketing uses internal sub-agents, only the **Marketing Lead** may emit domain-level outcomes back to the router.
 
-4. **Mock MCP tool server (one server, namespaced tools)**  
+4. **Domain-internal orchestration is allowed**  
+   Router-visible identities remain the same: router, Product, Marketing, and Finance. A domain may internally orchestrate private sub-agents as long as domain boundaries remain intact. For Marketing, the router talks only to the **Marketing Lead**. Internal marketing workers may collaborate under the lead, but they may not directly message the router, Product, or Finance, and they do not own cross-domain cascade decisions.
+
+5. **Mock MCP tool server (one server, namespaced tools)**  
    This is a **hackathon** project: tool calls can be **fake** with **mocked** payloads, but we still host a **tool server / MCP** so the loop looks like production — structured inputs/outputs and clear ownership. One MCP server exposes namespaced tools: `product.*`, `marketing.*`, `finance.*`, and shared `roadmap.*`. Value is in **contracts and cascade**, not real CRM/accounting/API integrations.
 
 ---

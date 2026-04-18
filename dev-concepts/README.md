@@ -27,6 +27,17 @@ This doc ties our design to **concrete OpenHarness / ohmo primitives** (paths, e
 
 ---
 
+### Boundary and orchestration invariants
+
+- **No peer-to-peer** messages between Product, Marketing, and Finance.
+- Domain agents return structured outcomes to **`the-gooning-company`**; the router performs **fan-out** and **summarization** for the next hop.
+- A domain may run private internal sub-agents, but only the router-visible domain lead may emit cross-domain outcomes.
+- Router-visible identities stay minimal: router plus one endpoint per domain.
+- Sub-agents inherit the domain boundary: they do not message other domains or the router directly.
+- Final domain memory writes and cross-domain events should go through the lead unless a delegated path is explicitly documented.
+
+---
+
 ## 2. Workspace layout (concrete ohmo paths)
 
 Resolution order for workspace root ([`get_workspace_root`](https://github.com/HKUDS/OpenHarness/blob/main/ohmo/workspace.py)): explicit `workspace` argument → `OHMO_WORKSPACE` env → `~/.ohmo`.
@@ -100,6 +111,17 @@ or `state/roadmap.json` / split representation — **format TBD** in [`roadmap-s
 
 - **Read:** all agents may read `state/roadmap.*` (subject to cwd / permission rules).
 - **Write:** only **Product** should mutate files under `state/` for roadmap content. Enforce with **per-workspace** `settings.json` under `openharness` / harness conventions: e.g. `permission.path_rules` allowing `./state/roadmap.*` writes **only** in `workspaces/product/`, and **deny** the same pattern in router/marketing/finance. Mutations should still go through **`roadmap.*`** MCP tools where possible so the harness sees structured tool use (for hooks and trace).
+
+---
+
+## 2.5. Hierarchical domain agents
+
+- Router-visible identities stay minimal: router plus one endpoint per domain.
+- A domain endpoint may orchestrate private sub-agents for specialist work.
+- Sub-agents inherit the domain boundary: they do not message other domains or the router directly.
+- Final domain memory writes should go through the lead unless a delegated write path is explicitly documented.
+- Final cross-domain events should go through the lead so the router receives one coherent domain outcome.
+- For Marketing, the router communicates only with the **Marketing Lead**; content, performance, ops, and any future specialists remain Marketing-private.
 
 ---
 
