@@ -4,7 +4,7 @@
     "gooning-mock": {
       "_comment": "TODO(glue): set this to the final transport once tools/mock_mcp/ lands. HTTP (preferred, per OpenHarness v0.1.5+) or stdio.",
       "transport": "http",
-      "url": "http://127.0.0.1:8765/mcp",
+      "url": "http://127.0.0.1:8765/mcp/",
       "enabled": true
     }
   }

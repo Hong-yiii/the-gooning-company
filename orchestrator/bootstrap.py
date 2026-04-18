@@ -129,7 +129,13 @@ def _build_settings(
         "model": model,
         "mcp_servers": {"gooning-mock": mcp_entry},
         "permission": {
-            "mode": "default",
+            # Upstream ``PermissionMode`` supports only ``default`` / ``plan`` /
+            # ``full_auto`` at the session level. ``default`` prompts the user
+            # before each mutating call — correct for the interactive TUI and
+            # fatal for non-interactive ``--print`` runs, which have no-one to
+            # approve. The launcher flips this to ``full_auto`` automatically
+            # when ``--print`` is in play.
+            "mode": os.environ.get("GOONING_PERMISSION_MODE", "default").strip() or "default",
             "path_rules": _compose_path_rules(cfg),
         },
     }
@@ -213,12 +219,23 @@ def _compose_agent_md(cfg: OrchestratorConfig, workspace: Path) -> str:
     name = workspace.name
     description = _TEAMMATE_DESCRIPTIONS.get(name, f"Domain agent: {name}")
     body = _compose_system_prompt(cfg, workspace)
+    # Omit the ``model:`` frontmatter entirely. Upstream
+    # ``AgentDefinition.model`` documents the contract as ``None`` = inherit
+    # default (openharness/coordinator/agent_definitions.py L98). The literal
+    # string ``"inherit"`` is only special-cased for built-in agents; for
+    # user-defined agents it is forwarded verbatim to the spawn subprocess
+    # as ``--model inherit``, which every real provider (OpenAI, Anthropic,
+    # …) rejects with ``The model "inherit" does not exist``.
+    color = {
+        "product": "cyan",
+        "marketing": "magenta",
+        "finance": "yellow",
+    }.get(name, "gray")
     frontmatter = [
         "---",
         f"name: {name}",
         f"description: {description}",
-        "model: inherit",
-        "color: cyan" if name == "product" else ("color: magenta" if name == "marketing" else "color: yellow"),
+        f"color: {color}",
         "---",
         "",
     ]
@@ -263,7 +280,12 @@ def run_bootstrap(cfg: OrchestratorConfig, *, verbose: bool = False) -> Bootstra
     base_url = os.environ.get("OPENAI_BASE_URL", "").strip() or "https://api.openai.com/v1"
     mcp_host = os.environ.get("GOONING_MCP_HOST", "127.0.0.1").strip() or "127.0.0.1"
     mcp_port = os.environ.get("GOONING_MCP_PORT", "8765").strip() or "8765"
-    mcp_url = f"http://{mcp_host}:{mcp_port}/mcp"
+    # Trailing slash is required: the Streamable-HTTP transport is served by
+    # Starlette's ``Mount("/mcp", ...)``, which 307-redirects ``POST /mcp`` to
+    # ``POST /mcp/``. The OpenHarness/httpx MCP client does not follow 307s
+    # on POST, so the session initialize hangs/crashes. Always point clients
+    # at ``/mcp/`` directly.
+    mcp_url = f"http://{mcp_host}:{mcp_port}/mcp/"
 
     _require_env("OPENAI_API_KEY")
 

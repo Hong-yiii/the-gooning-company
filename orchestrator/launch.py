@@ -307,6 +307,13 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
     _preflight(cfg)
 
+    # Non-interactive runs (``--print``) have no human to approve mutating
+    # tool calls, so the default permission mode hangs the router at the
+    # first ``agent(...)`` spawn. Opt the whole session into ``full_auto``
+    # for ``--print`` unless the caller has already picked a mode.
+    if args.print_prompt is not None:
+        os.environ.setdefault("GOONING_PERMISSION_MODE", "full_auto")
+
     if args.describe:
         print(_describe(cfg))
         return 0
