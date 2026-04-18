@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { fetchGodFile, subscribeGodFile } from '../api/index'
 import styles from './GodFilesPanel.module.css'
@@ -12,13 +12,50 @@ const AGENTS = [
 
 const EMPTY_BY_AGENT = Object.fromEntries(AGENTS.map(({ key }) => [key, null]))
 const FALSE_BY_AGENT = Object.fromEntries(AGENTS.map(({ key }) => [key, false]))
+const EMPTY_DIFF = { added: new Set(), removed: [], changeId: 0 }
+const EMPTY_DIFF_BY_AGENT = Object.fromEntries(AGENTS.map(({ key }) => [key, EMPTY_DIFF]))
+
+// After this window the "just changed" CSS classes are cleared so the
+// rendered view returns to normal.
+const DIFF_CLEAR_MS = 15000
+
+// ─── Line-level diff ─────────────────────────────────────────────────────────
+// Not a true LCS; trimmed-text set membership is enough for short god.md files
+// where additions are mostly whole-bullet writes. False-positives only happen
+// when a bullet is moved unchanged; that's acceptable visual noise.
+function computeDiff(prev, next) {
+  const prevLines = (prev || '').split('\n')
+  const nextLines = (next || '').split('\n')
+  const prevSet = new Set(prevLines.map((l) => l.trim()).filter(Boolean))
+  const nextSet = new Set(nextLines.map((l) => l.trim()).filter(Boolean))
+
+  const added = new Set()
+  for (const l of nextLines) {
+    const t = l.trim()
+    if (t && !prevSet.has(t)) added.add(t)
+  }
+  const removed = []
+  for (const l of prevLines) {
+    const t = l.trim()
+    if (t && !nextSet.has(t)) removed.push(t)
+  }
+  return { added, removed }
+}
+
+// Context that carries the latest diff into the markdown renderer.
+const DiffContext = createContext({ added: new Set(), removed: [] })
+
+// ─── Panel ───────────────────────────────────────────────────────────────────
 
 export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
   const [activeAgent, setActiveAgent] = useState('router')
   const [godFiles, setGodFiles] = useState(EMPTY_BY_AGENT)
-  const [lastPulse, setLastPulse] = useState(EMPTY_BY_AGENT)
+  const [diffs, setDiffs] = useState(EMPTY_DIFF_BY_AGENT)
   const [pulseActive, setPulseActive] = useState(FALSE_BY_AGENT)
+  const changeCounter = useRef(0)
+  const clearTimers = useRef({})
 
+  // Initial fetch — diff against empty so nothing lights up on first load.
   useEffect(() => {
     AGENTS.forEach(({ key }) => {
       fetchGodFile(key).then((data) =>
@@ -30,39 +67,73 @@ export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
   // Slow polling fallback — SSE pushes live updates via liveUpdate prop.
   useEffect(() => {
     const unsubscribers = AGENTS.map(({ key }) =>
-      subscribeGodFile(key, (data) => {
-        setGodFiles((prev) => {
-          const prevData = prev[key]
-          const changed = prevData && prevData.updatedAt !== data.updatedAt
-          if (changed) triggerPulse(key, data.updatedAt)
-          return { ...prev, [key]: data }
-        })
-      }, 30000)
+      subscribeGodFile(
+        key,
+        (data) => {
+          setGodFiles((prev) => {
+            const prevData = prev[key]
+            if (prevData && prevData.updatedAt !== data.updatedAt) {
+              applyDiff(key, prevData.content, data.content)
+            }
+            return { ...prev, [key]: data }
+          })
+        },
+        30000
+      )
     )
     return () => unsubscribers.forEach((fn) => fn())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Real-time SSE push from /api/events — updates arrive as
-  // { agent, content, updatedAt } whenever a teammate writes god.md.
+  // Real-time SSE push from /api/events.
   useEffect(() => {
     if (!liveUpdate || !liveUpdate.agent) return
     const { agent } = liveUpdate
     setGodFiles((prev) => {
       const prevData = prev[agent]
       const changed = !prevData || prevData.updatedAt !== liveUpdate.updatedAt
-      if (changed) triggerPulse(agent, liveUpdate.updatedAt)
+      if (changed) {
+        applyDiff(agent, prevData?.content, liveUpdate.content)
+      }
       return { ...prev, [agent]: liveUpdate }
     })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveUpdate])
 
-  const triggerPulse = (agent, ts) => {
-    setLastPulse((p) => ({ ...p, [agent]: ts }))
+  const applyDiff = (agent, before, after) => {
+    // Skip when there's no real "before" — we don't want every first fetch
+    // to light up green on fresh page loads.
+    if (!before) {
+      setDiffs((d) => ({ ...d, [agent]: EMPTY_DIFF }))
+      return
+    }
+    const { added, removed } = computeDiff(before, after)
+    if (added.size === 0 && removed.length === 0) {
+      setDiffs((d) => ({ ...d, [agent]: EMPTY_DIFF }))
+      return
+    }
+    changeCounter.current += 1
+    const changeId = changeCounter.current
+    setDiffs((d) => ({ ...d, [agent]: { added, removed, changeId } }))
     setPulseActive((p) => ({ ...p, [agent]: true }))
-    setTimeout(() => setPulseActive((p) => ({ ...p, [agent]: false })), 2000)
+    clearTimeout(clearTimers.current[`pulse:${agent}`])
+    clearTimers.current[`pulse:${agent}`] = setTimeout(
+      () => setPulseActive((p) => ({ ...p, [agent]: false })),
+      2000
+    )
+    clearTimeout(clearTimers.current[`diff:${agent}`])
+    clearTimers.current[`diff:${agent}`] = setTimeout(
+      () => setDiffs((d) => ({ ...d, [agent]: EMPTY_DIFF })),
+      DIFF_CLEAR_MS
+    )
   }
 
+  useEffect(() => () => {
+    Object.values(clearTimers.current).forEach(clearTimeout)
+  }, [])
+
   const active = godFiles[activeAgent]
+  const activeDiff = diffs[activeAgent]
 
   return (
     <div className={styles.panel}>
@@ -94,7 +165,14 @@ export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
           <div className={styles.loading}>Loading…</div>
         ) : (
           <>
-            <GodFileContent content={active.content} />
+            <DiffBanner diff={activeDiff} />
+            <DiffContext.Provider value={activeDiff}>
+              {/* remount when a change arrives so CSS fade-in animates */}
+              <GodFileContent
+                key={`${activeAgent}-${activeDiff.changeId}`}
+                content={active.content}
+              />
+            </DiffContext.Provider>
             <div className={styles.fileFooter}>
               <span className={styles.footerLabel}>god.md — {activeAgent}</span>
               <span className={styles.footerTime}>
@@ -107,6 +185,49 @@ export default function GodFilesPanel({ agentStatuses, liveUpdate }) {
     </div>
   )
 }
+
+// ─── Change banner ───────────────────────────────────────────────────────────
+
+function DiffBanner({ diff }) {
+  const [showRemoved, setShowRemoved] = useState(false)
+  const addedCount = diff.added?.size || 0
+  const removedCount = diff.removed?.length || 0
+
+  if (addedCount === 0 && removedCount === 0) return null
+
+  return (
+    <div className={styles.diffBanner}>
+      <span className={styles.diffBannerPulse} />
+      <span className={styles.diffBannerLabel}>just edited</span>
+      {addedCount > 0 && (
+        <span className={styles.diffBannerAdded}>+{addedCount}</span>
+      )}
+      {removedCount > 0 && (
+        <button
+          className={styles.diffBannerRemoved}
+          onClick={() => setShowRemoved((s) => !s)}
+          title="click to view removed lines"
+        >
+          −{removedCount}
+        </button>
+      )}
+      {showRemoved && removedCount > 0 && (
+        <ul className={styles.removedList}>
+          {diff.removed.slice(0, 6).map((line, i) => (
+            <li key={i} className={styles.removedLine}>
+              {line}
+            </li>
+          ))}
+          {removedCount > 6 && (
+            <li className={styles.removedMore}>… +{removedCount - 6} more</li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ─── Content / sections ──────────────────────────────────────────────────────
 
 function GodFileContent({ content }) {
   const sections = parseMarkdownSections(content)
@@ -151,10 +272,49 @@ function Section({ section }) {
   )
 }
 
-// Map markdown AST nodes onto CSS-module classes so we get real
-// bold/code/italic/link/list rendering without leaking global styles.
+// ─── Markdown renderer (with diff-aware block highlighting) ─────────────────
+
+function extractText(node) {
+  if (node == null || typeof node === 'boolean') return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(extractText).join('')
+  if (node.props?.children) return extractText(node.props.children)
+  return ''
+}
+
+function useIsAdded(children) {
+  const diff = useContext(DiffContext)
+  const text = useMemo(() => extractText(children).trim(), [children])
+  if (!text || diff.added.size === 0) return false
+  return diff.added.has(text)
+}
+
+function DiffAwareLi({ children, ...props }) {
+  const isAdded = useIsAdded(children)
+  return (
+    <li
+      className={`${styles.li} ${isAdded ? styles.liAdded : ''}`}
+      {...props}
+    >
+      {children}
+    </li>
+  )
+}
+
+function DiffAwarePara({ children, ...props }) {
+  const isAdded = useIsAdded(children)
+  return (
+    <p
+      className={`${styles.para} ${isAdded ? styles.paraAdded : ''}`}
+      {...props}
+    >
+      {children}
+    </p>
+  )
+}
+
 const MARKDOWN_COMPONENTS = {
-  p: ({ node, ...props }) => <p className={styles.para} {...props} />,
+  p: ({ node, ...props }) => <DiffAwarePara {...props} />,
   strong: ({ node, ...props }) => <strong className={styles.strong} {...props} />,
   em: ({ node, ...props }) => <em className={styles.em} {...props} />,
   code: ({ node, inline, className, children, ...props }) =>
@@ -167,7 +327,7 @@ const MARKDOWN_COMPONENTS = {
     ),
   ul: ({ node, ...props }) => <ul className={styles.ul} {...props} />,
   ol: ({ node, ...props }) => <ol className={styles.ol} {...props} />,
-  li: ({ node, ...props }) => <li className={styles.li} {...props} />,
+  li: ({ node, ...props }) => <DiffAwareLi {...props} />,
   a: ({ node, ...props }) => (
     <a className={styles.link} target="_blank" rel="noreferrer" {...props} />
   ),
@@ -186,6 +346,8 @@ function MarkdownBody({ text }) {
     </div>
   )
 }
+
+// ─── misc ────────────────────────────────────────────────────────────────────
 
 function StatusPip({ status }) {
   if (!status) return null

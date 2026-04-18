@@ -344,3 +344,173 @@
   font-size: 10px;
   color: var(--ink-muted);
 }
+
+/* ─── Diff: just-edited banner ──────────────────────────────────────────── */
+
+.diffBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 16px 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(122, 184, 122, 0.35);
+  background: linear-gradient(
+    180deg,
+    rgba(122, 184, 122, 0.10),
+    rgba(122, 184, 122, 0.04)
+  );
+  border-radius: var(--radius-sm);
+  font-size: 10.5px;
+  color: var(--ink-secondary);
+  animation: diffBannerIn 220ms ease-out, diffBannerOut 1.5s ease-in 13.5s forwards;
+}
+
+@keyframes diffBannerIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes diffBannerOut {
+  to { opacity: 0; transform: translateY(-2px); }
+}
+
+.diffBannerPulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7ab87a;
+  animation: livePulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.diffBannerLabel {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+}
+
+.diffBannerAdded {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #3f7a3f;
+  background: rgba(122, 184, 122, 0.18);
+  border: 1px solid rgba(122, 184, 122, 0.35);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.diffBannerRemoved {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: #a64141;
+  background: rgba(200, 120, 120, 0.15);
+  border: 1px solid rgba(200, 120, 120, 0.35);
+  border-radius: 3px;
+  padding: 1px 5px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.diffBannerRemoved:hover {
+  background: rgba(200, 120, 120, 0.25);
+}
+
+.removedList {
+  width: 100%;
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(200, 120, 120, 0.07);
+  border-left: 2px solid rgba(200, 120, 120, 0.55);
+  border-radius: 0 3px 3px 0;
+}
+
+.removedLine {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: #8a4444;
+  text-decoration: line-through;
+  text-decoration-color: rgba(138, 68, 68, 0.5);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.removedLine::before {
+  content: '− ';
+  color: #a64141;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-block;
+  margin-right: 2px;
+}
+
+.removedMore {
+  font-size: 10px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+/* ─── Diff: inline line highlighting ────────────────────────────────────── */
+
+.liAdded,
+.paraAdded {
+  position: relative;
+  background: rgba(122, 184, 122, 0.16);
+  border-left: 2px solid #7ab87a;
+  border-radius: 2px;
+  padding: 1px 6px 1px 8px;
+  margin-left: -10px;
+  animation: diffFade 15s ease-out forwards;
+}
+
+.liAdded::before {
+  content: '+';
+  position: absolute;
+  left: -12px;
+  top: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3f7a3f;
+  opacity: 0.85;
+  animation: diffFade 15s ease-out forwards;
+}
+
+.paraAdded::before {
+  content: '+';
+  position: absolute;
+  left: -14px;
+  top: 1px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #3f7a3f;
+  opacity: 0.85;
+  animation: diffFade 15s ease-out forwards;
+}
+
+@keyframes diffFade {
+  0% {
+    background: rgba(122, 184, 122, 0.32);
+    border-left-color: #5fa85f;
+  }
+  20% {
+    background: rgba(122, 184, 122, 0.22);
+    border-left-color: #7ab87a;
+  }
+  85% {
+    background: rgba(122, 184, 122, 0.10);
+    border-left-color: rgba(122, 184, 122, 0.5);
+  }
+  100% {
+    background: transparent;
+    border-left-color: transparent;
+  }
+}
