@@ -163,6 +163,19 @@ def _read_or_empty(path: Path) -> str:
     return path.read_text(encoding="utf-8").strip() if path.is_file() else ""
 
 
+def _strip_leading_h1(text: str) -> str:
+    """Drop the first H1 line if present, so we can prepend our own section header without duplicating."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("# "):
+            return "\n".join(lines[i + 1 :]).lstrip("\n")
+        return text
+    return text
+
+
 def _compose_system_prompt(cfg: OrchestratorConfig, workspace: Path) -> str:
     """Compose the body of a teammate's AgentDefinition.
 
@@ -173,10 +186,10 @@ def _compose_system_prompt(cfg: OrchestratorConfig, workspace: Path) -> str:
     must live on disk and be composed into the system prompt. We build it
     as: shared base-system + role soul + role identity + role god.md.
     """
-    shared = _read_or_empty(cfg.shared_prompt_path)
-    soul = _read_or_empty(workspace / "soul.md")
-    identity = _read_or_empty(workspace / "identity.md")
-    god = _read_or_empty(workspace / "memory" / "god.md")
+    shared = _strip_leading_h1(_read_or_empty(cfg.shared_prompt_path))
+    soul = _strip_leading_h1(_read_or_empty(workspace / "soul.md"))
+    identity = _strip_leading_h1(_read_or_empty(workspace / "identity.md"))
+    god = _strip_leading_h1(_read_or_empty(workspace / "memory" / "god.md"))
 
     sections: list[str] = []
     if shared:
@@ -188,10 +201,9 @@ def _compose_system_prompt(cfg: OrchestratorConfig, workspace: Path) -> str:
     if god:
         sections.append(
             "# Your living doc (god.md)\n\n"
-            "This is your private running notes from prior turns. Treat it as "
-            "state you wrote to yourself. Update it via the Write tool on the "
-            f"path `{workspace / 'memory' / 'god.md'}` when your worldview "
-            "materially changes.\n\n"
+            "These are your private running notes from prior turns. Treat them as "
+            "state you wrote to yourself. Update via the Write tool on the path "
+            f"`{workspace / 'memory' / 'god.md'}` when your worldview changes.\n\n"
             + god
         )
     return "\n\n".join(sections).strip() + "\n"
