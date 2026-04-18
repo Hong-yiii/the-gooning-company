@@ -191,6 +191,8 @@ Concrete `settings.json` snippets → out of scope until implementation; keep pe
 
 ## 11. Follow-up docs (stubs to add)
 
+**Step-by-step implementation runbook (team onboarding, in-repo workspaces, shared prompts, atomic tasks):** [`implementation.md`](implementation.md).
+
 | Doc | Purpose |
 |-----|---------|
 | `roadmap-schema.md` | Columns, IDs, domain tags, state machine; choose md vs json |
