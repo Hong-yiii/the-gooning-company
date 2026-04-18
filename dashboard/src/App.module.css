@@ -99,11 +99,23 @@
 
 .main {
   display: grid;
-  grid-template-columns: 360px 1fr 340px;
+  grid-template-columns: 340px minmax(0, 1fr) 320px;
   gap: 0;
   flex: 1;
   overflow: hidden;
   min-height: 0;
+}
+
+@media (max-width: 1280px) {
+  .main {
+    grid-template-columns: 300px minmax(0, 1fr) 290px;
+  }
+}
+
+@media (max-width: 1080px) {
+  .main {
+    grid-template-columns: 280px minmax(0, 1fr) 270px;
+  }
 }
 
 .centerColumn {

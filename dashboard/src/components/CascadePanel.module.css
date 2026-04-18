@@ -4,6 +4,7 @@
   background: var(--cream-1);
   border-top: 1px solid var(--border-soft);
   min-height: 0;
+  min-width: 0;
   flex: 1;
   overflow: hidden;
 }

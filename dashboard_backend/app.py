@@ -196,14 +196,40 @@ def build_app(paths: DashboardPaths) -> Starlette:
                 yield _sse_format("error", {"error": repr(exc)})
                 return
 
+            # Track whether we've seen any real stdout and buffer stderr so
+            # that on failure we can surface a useful message in the chat
+            # bubble instead of leaving the user staring at an empty reply.
+            saw_stdout = False
+            stderr_buf: list[str] = []
+
             while True:
                 kind, chunk = await queue.get()
                 if kind == "exit":
-                    yield _sse_format("done", {"exit_code": chunk})
+                    exit_code = chunk
+                    stderr_text = "".join(stderr_buf).strip()
+                    if not saw_stdout:
+                        # No visible answer -> promote stderr (or a generic
+                        # hint) into the bubble so the failure is legible.
+                        msg = stderr_text or (
+                            f"ohmo exited with code {exit_code} without producing any output."
+                        )
+                        yield _sse_format("delta", f"⚠ router error\n\n{msg}")
+                    elif exit_code not in ("0", 0):
+                        # Had partial output, but the process still failed;
+                        # append a short diagnostic so it's not silent.
+                        hint = stderr_text.splitlines()[-1] if stderr_text else "unknown"
+                        yield _sse_format("delta", f"\n\n⚠ ohmo exited {exit_code}: {hint}")
+                    yield _sse_format("done", {
+                        "exit_code": exit_code,
+                        "saw_stdout": saw_stdout,
+                        "stderr_bytes": len(stderr_text),
+                    })
                     return
                 if kind == "stderr":
+                    stderr_buf.append(chunk)
                     yield _sse_format("log", chunk)
                     continue
+                saw_stdout = True
                 yield _sse_format("delta", chunk)
 
         return StreamingResponse(gen(), media_type="text/event-stream", headers={
