@@ -11,19 +11,20 @@ license = { file = "LICENSE" }
 # tighten once we have a known-good release.
 dependencies = [
   "openharness-ai>=0.1.6,<0.2",
+  # MCP Python SDK — we depend on it directly for the mock server's
+  # FastMCP streamable-http transport. OpenHarness pulls it as a
+  # transitive, but we import it ourselves so pin it explicitly.
+  "mcp>=1.8,<2",
+  # .env loader used by orchestrator/bootstrap.py. Also transitive via
+  # openharness-ai, but we import it directly.
+  "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
-# Keep dev tooling and mock MCP server isolated. Glue picks the HTTP framework
-# in `tools/mock_mcp/` later; add it to the right extra when that decision is made.
 dev = [
   "pytest>=8",
   "ruff>=0.5",
 ]
-
-# TODO(glue): pick HTTP stack for the mock MCP server (aiohttp vs fastapi).
-# Leaving this extra empty so the choice is explicit in a dedicated PR.
-mcp = []
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

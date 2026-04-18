@@ -38,6 +38,12 @@ workspaces/*/gateway-restart-notice.json
 state/cascade-trace.jsonl
 state/.last-run/
 
+# Per-repo OpenHarness config dir the orchestrator materializes at launch.
+# Contains a generated settings.json (with provider profile + mcp_servers),
+# an agents/ dir with one AgentDefinition per teammate, and session state.
+# Regenerated every launch; never commit.
+state/.openharness/
+
 # ---------------------------------------------------------------------------
 # Mock MCP server working copy (persisted mocks regenerate on boot if missing)
 # ---------------------------------------------------------------------------
