@@ -1,29 +1,56 @@
-# Agent spec: Marketing
+# Agent spec: Marketing (Crumb)
 
-> **Status:** placeholder — fill before implementation.
+> **Status:** demo-ready — mock analytics and campaign fixtures.
 
 ## Role
 
-Owns campaigns, messaging, and go-to-market plans. **Reads** the shared roadmap; does **not** silently edit Product’s `god.md`. Surfaces roadmap gaps or conflicts **through the router** to Product.
+Owns positioning, campaigns, and GTM for **Crumb**. **Reads** the shared roadmap; does **not** mutate it. Surfaces roadmap gaps via the router as structured **`marketing.issue_raised`**.
 
 ## Private god.md
 
-- Campaign briefs, channel plans, narrative decisions, experiment results.
+- Campaign briefs, channel plans, two-sided messaging (buyers vs bakers), experiment readouts.
 
 ## MCP tools (namespaced)
 
-- `marketing.*`: e.g. `marketing.create_campaign`, `marketing.list_campaigns` — mock OK.
-- Read-only `roadmap.*` reads if exposed — TBD.
+| Tool | Purpose | Callers |
+|------|---------|---------|
+| `marketing.list_campaigns` | Seeded campaigns (`M-001`, `M-002`, `M-EB1`, …). | marketing |
+| `marketing.get_channel_performance` | CTR, CPC, CAC, orders by channel (`window`, default `last_30d`). | marketing |
+| `marketing.get_funnel_metrics` | Buyer or baker funnel counts and rates (`side`). | marketing |
+| `marketing.draft_campaign` | Deterministic outline from `objective` + `audience`. | marketing |
+| `marketing.estimate_reach` | Reach band for a `draft_id` (deterministic). | marketing |
+| `roadmap.read_all` / `roadmap.read_item` | Read-only roadmap context. | marketing (+ others) |
 
 ## Cascade — inbound
 
-- Roadmap updates from router (summaries from Product).
-- Founder or router requests for launches / positioning.
+- **`roadmap.changed`** summaries from the router (after Product).
+- Founder / router asks for launches, messaging, or channel plans.
 
 ## Cascade — outbound
 
-- `marketing.campaign_started` / `marketing.issue_raised` (conceptual): router forwards **Finance** (spend) and/or **Product** (roadmap item).
+```json
+{
+  "event": "marketing.campaign_drafted",
+  "id": "M-00X",
+  "audience": "buyer",
+  "channels": ["instagram_reels", "referral"],
+  "budget_usd": 9500,
+  "expected_cac": 7.2,
+  "launch": "2026-11-25"
+}
+```
+
+```json
+{
+  "event": "marketing.issue_raised",
+  "summary": "Cannot run holiday CTA without pickup windows in product.",
+  "suggested_item": {
+    "title": "Ship pickup-scheduler v2 before holiday campaign",
+    "domain": "product"
+  }
+}
+```
 
 ## Open questions
 
-- Which events always require Finance vs optional — define thresholds in stubs or dev-concepts.
+- Thresholds for when every campaign ping requires Finance (`finance.cost_campaign`) — default: any net-new spend over **$5k** in mock briefs.

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { fetchGodFile, subscribeGodFile } from '../api/index'
 import styles from './GodFilesPanel.module.css'
 
@@ -146,32 +147,38 @@ function Section({ section }) {
   )
 }
 
+// Map markdown AST nodes onto CSS-module classes so we get real
+// bold/code/italic/link/list rendering without leaking global styles.
+const MARKDOWN_COMPONENTS = {
+  p: ({ node, ...props }) => <p className={styles.para} {...props} />,
+  strong: ({ node, ...props }) => <strong className={styles.strong} {...props} />,
+  em: ({ node, ...props }) => <em className={styles.em} {...props} />,
+  code: ({ node, inline, className, children, ...props }) =>
+    inline === false ? (
+      <pre className={styles.pre}>
+        <code className={styles.codeBlock} {...props}>{children}</code>
+      </pre>
+    ) : (
+      <code className={styles.code} {...props}>{children}</code>
+    ),
+  ul: ({ node, ...props }) => <ul className={styles.ul} {...props} />,
+  ol: ({ node, ...props }) => <ol className={styles.ol} {...props} />,
+  li: ({ node, ...props }) => <li className={styles.li} {...props} />,
+  a: ({ node, ...props }) => (
+    <a className={styles.link} target="_blank" rel="noreferrer" {...props} />
+  ),
+  h3: ({ node, ...props }) => <h3 className={styles.h3} {...props} />,
+  h4: ({ node, ...props }) => <h4 className={styles.h4} {...props} />,
+  blockquote: ({ node, ...props }) => (
+    <blockquote className={styles.blockquote} {...props} />
+  ),
+  hr: () => <hr className={styles.hr} />,
+}
+
 function MarkdownBody({ text }) {
-  const lines = text.split('\n').filter(Boolean)
   return (
     <div className={styles.markdownBody}>
-      {lines.map((line, i) => {
-        if (line.startsWith('- ')) {
-          return (
-            <div key={i} className={styles.listItem}>
-              <span className={styles.bullet}>·</span>
-              <span>{line.slice(2)}</span>
-            </div>
-          )
-        }
-        if (line.startsWith('*') && line.endsWith('*')) {
-          return (
-            <p key={i} className={styles.italicLine}>
-              {line.slice(1, -1)}
-            </p>
-          )
-        }
-        return (
-          <p key={i} className={styles.para}>
-            {line}
-          </p>
-        )
-      })}
+      <ReactMarkdown components={MARKDOWN_COMPONENTS}>{text}</ReactMarkdown>
     </div>
   )
 }

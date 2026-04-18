@@ -99,7 +99,8 @@
 
 .main {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr) 320px;
+  /* Chat ~22% • roadmap+cascade = rest • agent files ~30% */
+  grid-template-columns: minmax(260px, 22%) minmax(0, 1fr) minmax(340px, 30%);
   gap: 0;
   flex: 1;
   overflow: hidden;
@@ -108,13 +109,13 @@
 
 @media (max-width: 1280px) {
   .main {
-    grid-template-columns: 300px minmax(0, 1fr) 290px;
+    grid-template-columns: minmax(240px, 22%) minmax(0, 1fr) minmax(320px, 30%);
   }
 }
 
 @media (max-width: 1080px) {
   .main {
-    grid-template-columns: 280px minmax(0, 1fr) 270px;
+    grid-template-columns: minmax(220px, 22%) minmax(0, 1fr) minmax(300px, 30%);
   }
 }
 

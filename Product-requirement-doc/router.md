@@ -1,20 +1,19 @@
-# Agent spec: `the-gooning-company` (router)
+# Agent spec: `the-gooning-company` (router) — Crumb demo
 
-> **Status:** placeholder — fill before implementation.
+> **Status:** demo-ready — routing + cascade fan-out via `agent(...)`; no peer-to-peer.
 
 ## Role
 
-Founder-facing entry agent. Classifies intent, pulls minimal context, delegates to Product / Marketing / Finance via harness messaging, and **brokers all cascades** (no peer-to-peer between domain agents).
+Founder-facing entry for **Crumb** (within The Gooning Company harness). Classifies intent, delegates to **product** / **marketing** / **finance** via the harness `agent` tool, and **brokers cascades** (no domain agent talks to another directly).
 
 ## Private god.md
 
-- Router-only notes: routing heuristics, founder preferences, recent dispatch decisions (not company domain truth).
-- **Do not** duplicate the full roadmap or domain `god.md` contents; link or summarize for dispatch only.
+- Router-only notes: open threads, pending cascades, last routing decisions — not canonical business truth (roadmap + domain `god.md`).
 
 ## MCP tools (namespaced)
 
-- `router.*` (optional): e.g. `router.log_cascade`, `router.resolve_intent` — TBD.
-- Router may have **read-only** observability tools for dashboard trace export — TBD in [`../dev-concepts/README.md`](../dev-concepts/README.md).
+- **`router.*`:** none required for v0 (optional helpers deferred).
+- Router may use **`roadmap.read_*`** for observability when citing status to the founder.
 
 ## Cascade — inbound
 
@@ -23,9 +22,24 @@ Founder-facing entry agent. Classifies intent, pulls minimal context, delegates 
 
 ## Cascade — outbound
 
-- `dispatch.product`, `dispatch.marketing`, `dispatch.finance` (conceptual): structured handoff to one or more domain agents with **why** and **what changed**.
-- Fan-out notifications when one domain’s outcome requires others (e.g. roadmap updated → notify Marketing + Finance).
+Dispatch is via **`agent(subagent_type=…, prompt=…)`** — not a separate MCP tool.
+
+Fan-out pattern (conceptual):
+
+1. If Product returns **`roadmap.changed`**, router calls **marketing** then **finance** with the same delta summary.
+2. If Marketing returns **`marketing.campaign_drafted`**, router calls **finance** for **`finance.cost_campaign`** / implications.
+3. If Finance returns **`finance.risk_flag`**, router calls **product** and/or **marketing** with the constraint.
+
+### Envelope reference (copy-paste)
+
+| Event | When | Key fields |
+|-------|------|--------------|
+| `roadmap.changed` | After roadmap mutation | `id`, `title`, `domain`, `from_status`, `to_status`, `reason` |
+| `marketing.campaign_drafted` | Campaign outline approved | `id`, `audience`, `channels[]`, `budget_usd`, `expected_cac`, `launch` |
+| `marketing.issue_raised` | Needs Product | `summary`, `suggested_item{title,domain}` |
+| `finance.implication` | Numeric delta | `metric`, `before`, `after`, `delta`, `assumption`, `severity` |
+| `finance.risk_flag` | Escalation | `reason`, `recommend` |
 
 ## Open questions
 
-- Exact event payload schema (JSON) — define in a follow-up pass.
+- Mailbox / plugin fan-out deferred — router prompt is source of truth for v0 demo.

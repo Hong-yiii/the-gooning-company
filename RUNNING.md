@@ -79,16 +79,16 @@ These commands don't need OpenHarness installed and don't touch any LLM provider
 
 ```bash
 # List every registered mock tool with its allowed callers.
-python3 -m tools.mock_mcp.server --list
+python3 -m tools.mock_mcp --list
 
 # Run every handler with {} to confirm no crashes.
-python3 -m tools.mock_mcp.server --smoke
+python3 -m tools.mock_mcp --smoke
 
 # Dump JSON-schema-ish tool definitions.
-python3 -m tools.mock_mcp.server --dump-schema
+python3 -m tools.mock_mcp --dump-schema
 ```
 
-Expected: 13 tools across `product.*`, `marketing.*`, `finance.*`, `roadmap.*`.
+Expected: ~20 tools across `product.*`, `marketing.*`, `finance.*`, `roadmap.*` (Crumb demo fixtures).
 
 ### 3.2 Orchestrator config resolution
 
