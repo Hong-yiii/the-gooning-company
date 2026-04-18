@@ -1,0 +1,38 @@
+[project]
+name = "the-gooning-company"
+version = "0.0.1"
+description = "Router + three domain agents (Product / Marketing / Finance) on OpenHarness."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { file = "LICENSE" }
+
+# Runtime dependencies.
+# NOTE: OpenHarness version is intentionally pinned loosely for the hackathon;
+# tighten once we have a known-good release.
+dependencies = [
+  "openharness-ai>=0.1.6,<0.2",
+]
+
+[project.optional-dependencies]
+# Keep dev tooling and mock MCP server isolated. Glue picks the HTTP framework
+# in `tools/mock_mcp/` later; add it to the right extra when that decision is made.
+dev = [
+  "pytest>=8",
+  "ruff>=0.5",
+]
+
+# TODO(glue): pick HTTP stack for the mock MCP server (aiohttp vs fastapi).
+# Leaving this extra empty so the choice is explicit in a dedicated PR.
+mcp = []
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["orchestrator*", "tools*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

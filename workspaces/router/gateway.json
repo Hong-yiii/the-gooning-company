@@ -1,0 +1,12 @@
+{
+  "_comment": "Gateway config. Channel list + profile NAME only. Credentials live in ohmo/oh local config, NOT in this repo.",
+  "profile": "the-gooning-company",
+  "channels": [
+    {
+      "_comment": "TODO(glue): wire the dashboard channel once the UI is chosen (autopilot-dashboard vs custom).",
+      "id": "dashboard",
+      "type": "http",
+      "enabled": false
+    }
+  ]
+}

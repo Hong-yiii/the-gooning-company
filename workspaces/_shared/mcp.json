@@ -1,0 +1,11 @@
+{
+  "_comment": "Shared MCP fragment merged into every workspace's effective settings by orchestrator/launch.py. Do NOT put machine-local URLs or secrets here; use environment variables in launch.py instead.",
+  "mcp_servers": {
+    "gooning-mock": {
+      "_comment": "TODO(glue): set this to the final transport once tools/mock_mcp/ lands. HTTP (preferred, per OpenHarness v0.1.5+) or stdio.",
+      "transport": "http",
+      "url": "http://127.0.0.1:8765/mcp",
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,44 @@
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.python-version
+
+# ---------------------------------------------------------------------------
+# Editors / OS
+# ---------------------------------------------------------------------------
+.DS_Store
+.vscode/
+.idea/
+
+# ---------------------------------------------------------------------------
+# ohmo / OpenHarness runtime artifacts inside our in-repo workspaces.
+# Persona / skills / plugins / god.md ARE committed. Runtime and secrets are not.
+# ---------------------------------------------------------------------------
+workspaces/*/sessions/
+workspaces/*/logs/
+workspaces/*/attachments/
+workspaces/*/state.json
+workspaces/*/gateway-restart-notice.json
+
+# Anything resembling credentials, anywhere.
+**/.credentials*
+**/auth.json
+**/*.secret
+**/*.token
+
+# ---------------------------------------------------------------------------
+# Shared run state produced by the orchestrator + hooks
+# ---------------------------------------------------------------------------
+state/cascade-trace.jsonl
+state/.last-run/
+
+# ---------------------------------------------------------------------------
+# Mock MCP server working copy (persisted mocks regenerate on boot if missing)
+# ---------------------------------------------------------------------------
+tools/mock_mcp/.data/

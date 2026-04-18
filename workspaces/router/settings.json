@@ -1,0 +1,20 @@
+{
+  "_comment": "Workspace settings for the-gooning-company (router). Orchestrator merges workspaces/_shared/mcp.json in at launch; DO NOT copy that here.",
+
+  "model": {
+    "_comment": "TODO(glue): set provider/model. Keep this OUT of git if provider config is sensitive. Prefer env vars resolved at launch time."
+  },
+
+  "permissions": {
+    "_comment": "path_rules restrict where the agent may read/write. Router should be able to read roadmap + every god.md (observability), but should NOT mutate roadmap.",
+    "path_rules": [
+      { "pattern": "state/roadmap.*", "mode": "read" },
+      { "pattern": "state/cascade-trace.jsonl", "mode": "append" },
+      { "pattern": "workspaces/*/memory/god.md", "mode": "read" }
+    ]
+  },
+
+  "tools": {
+    "_comment": "TODO(glue): enable SendMessage + any router.* MCP tools. Domain tools (product.*, marketing.*, finance.*) are NOT exposed here."
+  }
+}

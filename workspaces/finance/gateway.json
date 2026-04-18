@@ -1,0 +1,5 @@
+{
+  "_comment": "Finance has no founder-facing channel. Receives messages from the router via swarm mailbox.",
+  "profile": "finance",
+  "channels": []
+}

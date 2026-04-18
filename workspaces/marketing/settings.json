@@ -1,0 +1,19 @@
+{
+  "_comment": "Workspace settings for marketing. Read-only on roadmap; writes only to its own memory.",
+
+  "model": {
+    "_comment": "TODO(glue): set provider/model."
+  },
+
+  "permissions": {
+    "path_rules": [
+      { "pattern": "state/roadmap.*", "mode": "read" },
+      { "pattern": "workspaces/marketing/memory/god.md", "mode": "write" },
+      { "pattern": "state/cascade-trace.jsonl", "mode": "append" }
+    ]
+  },
+
+  "tools": {
+    "_comment": "TODO(glue): enable marketing.* and roadmap.read_*. Do NOT expose product.* or finance.*."
+  }
+}

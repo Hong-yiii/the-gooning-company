@@ -1,0 +1,5 @@
+{
+  "_comment": "Product has no founder-facing channel. It receives messages from the router via the swarm mailbox. Gateway is intentionally empty.",
+  "profile": "product",
+  "channels": []
+}

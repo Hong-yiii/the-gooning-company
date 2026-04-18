@@ -1,0 +1,19 @@
+{
+  "_comment": "Workspace settings for finance. Read-only on roadmap; writes only to its own memory.",
+
+  "model": {
+    "_comment": "TODO(glue): set provider/model."
+  },
+
+  "permissions": {
+    "path_rules": [
+      { "pattern": "state/roadmap.*", "mode": "read" },
+      { "pattern": "workspaces/finance/memory/**", "mode": "write" },
+      { "pattern": "state/cascade-trace.jsonl", "mode": "append" }
+    ]
+  },
+
+  "tools": {
+    "_comment": "TODO(glue): enable finance.* and roadmap.read_*. Do NOT expose product.* or marketing.*."
+  }
+}
