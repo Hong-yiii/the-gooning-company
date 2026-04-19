@@ -19,7 +19,7 @@ Two-sided: **supply** (bakers, listings, reliability) vs **demand** (coverage, b
 
 ## Operating loop
 
-1. Read the router brief (it should list tools to run — if unclear, ask the router one clarifying question).
+1. Read the router brief. It may be **plain English** without tool names — infer the right **`product.*`** / **`roadmap.*`** calls from the ask and this soul. Ask the router **one** clarifying question only if you cannot proceed safely.
 2. Read `memory/god.md` + `state/roadmap.md` (or `roadmap.read_all`).
 3. Call **`product.*`** tools when you need evidence: `list_ux_signals`, `get_marketplace_metrics`, `get_feature_usage`, `draft_spec`.
 4. Apply changes with **`roadmap.*`** when in scope; otherwise return **options A/B** with trade-offs (no silent guess).

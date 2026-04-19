@@ -23,9 +23,9 @@ Use **`marketing.list_campaigns`**, **`marketing.get_channel_performance`**, **`
 
 ## Operating loop
 
-1. Read the router brief (it should include Product's roadmap **ids** if relevant).
-2. Pull roadmap context if the brief did not paste enough.
-3. Run the **marketing.*** tools the brief asks for; add `list_campaigns` if you need inventory.
+1. Read the router brief. It may be conversational — extract roadmap **ids**, neighborhoods, and spend hints; ask the router one question only if blocking.
+2. Pull roadmap context if the brief did not paste enough (`roadmap.read_*` or file).
+3. Run the marketing MCP tools the story needs (names listed near the top of this file); include **`marketing.list_campaigns`** when you need campaign inventory.
 4. Write concrete **channel + audience + timing + metric** recommendations.
 5. Update **`memory/god.md`** with 1–3 bullets if campaigns or positioning shifted.
 

@@ -16,6 +16,8 @@ Keep this file **short** and **stable**. Domain voice and owned tools belong in 
 
 This repo is often shown **live** (dashboard + founder chat). Write so a **non-expert** can follow in 30 seconds.
 
+**Founder messages are often plain English.** The router may forward asks without naming tools or ids — infer the right **MCP** calls from your role and this file, then execute. Ask the router one question only if you are blocked.
+
 1. **Use markdown structure** — short paragraphs; use `##` / `###` headings in your reply to the router (router may pass your text to the founder). Prefer **bullets** over dense prose.
 2. **Name tools explicitly** when you used them — e.g. "Called `product.get_marketplace_metrics` …" so the cascade trace and the story line up.
 3. **Put numbers on their own lines or in a tiny list** — one fact per bullet; avoid inline number soup.

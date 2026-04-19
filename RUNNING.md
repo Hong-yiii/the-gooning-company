@@ -122,14 +122,15 @@ That command:
 
 Delegation: the router's built-in `agent` tool can spawn `product` / `marketing` / `finance` by name. Each delegation is a **fresh subprocess** (upstream `SubprocessBackend.spawn` → `create_agent_task`) whose system prompt is the full AgentDefinition body — so god.md is re-read every time. Teammates never message each other; every cross-domain effect goes back through the router.
 
-### 4.1 Minimal demo message (router + Product + roadmap + god.md)
+### 4.1 Demo scripts (natural language)
 
-Paste this to the router in `ohmo` when you want a **short** smoke (one delegate, few tools, visible file diffs):
+Paste any block below into the router as **Maya**. Prompts are plain English; the router and teammates infer tools from `soul.md` / `base-system.md`. For operator debugging, each line lists what should move on disk when things go well.
 
-> **Maya — minimal harness demo (do only this):**  
-> 1. Call `agent(product)` once. In the prompt, ask Product to: move **P-004** from **backlog** to **next** with `roadmap.move_item` and a one-line reason (e.g. `demo: pull subscription discovery forward`); update `workspaces/product/memory/god.md` with **one** new bullet tied to that move. Optional: a single `product.get_marketplace_metrics` call — skip if you want fewer tools.  
-> 2. Update `workspaces/router/memory/god.md` with **one** bullet stating what you delegated.  
-> 3. Reply briefly. **Skip** Marketing and Finance for this run.
+| Script | Paste to router | Expected artifacts (happy path) |
+|--------|-----------------|-----------------------------------|
+| **Easy — read only** | “Quick check: skim our roadmap and tell me **three** items you’d actually steer the company around this week. **No edits**—just your read for the room.” | None (or router reads roadmap); no `god.md` requirement |
+| **Easy — one roadmap nudge** | “I want the **recurring weekly-order / subscription** work slightly higher in the queue. Have **Product** pull that forward on the roadmap where it makes sense, add **one** short bullet to their living doc, and come back when it’s done. **Don’t** pull in Marketing or Finance for this.” | `state/roadmap.md` (e.g. **P-004** toward **Next**); `workspaces/product/memory/god.md` |
+| **Cascade — full pass** | “**East Brooklyn** still feels short on bakers; **Williamsburg** feels soft on buyers converting. Have **Product** look at neighborhood health, make **one** deliberate roadmap move so the change log reflects it, then walk **Marketing** and **Finance** through what that means for channels, spend, and runway—same story end to end. Jot **one** line in **your** living doc when you’re done.” | Same as above **plus** router `memory/god.md`; Marketing + Finance `god.md` if they update; downstream tool calls in trace |
 
 **Roadmap persistence:** `roadmap.move_item` / `roadmap.add_item` / `roadmap.drop_item` write to **`state/roadmap.md`** on disk (atomic temp + replace in `tools/mock_mcp/tools/roadmap.py`). Changes survive stopping and restarting the mock MCP or the orchestrator — you **do not** need to restart MCP just to “flush” the roadmap. Restart MCP only when you need a **new Python process** (e.g. after editing mock tool code), the server died, or the port is wedged.
 

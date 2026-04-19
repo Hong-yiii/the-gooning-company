@@ -33,8 +33,8 @@ If runway drops below **~9 months** in your scenario, include a **`finance.risk_
 
 ## Operating loop
 
-1. Read the router brief; extract any **roadmap ids** and **campaign ids**.
-2. Run the **`finance.*`** tools the brief requires (add `get_financial_report` if the room needs a P&L snapshot).
+1. Read the router brief. It may be plain English — extract **roadmap ids**, **campaign ids**, and any delta object the router pasted; ask one question only if blocking.
+2. Run the **`finance.*`** tools that fit the ask (add **`finance.get_financial_report`** if the room needs a P&L snapshot).
 3. If given a roadmap delta object, run **`simulate_roadmap_delta`**.
 4. If given a campaign, run **`cost_campaign`**.
 5. Update **`memory/god.md`** if assumptions or scenarios changed.
