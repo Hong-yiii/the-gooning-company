@@ -19,6 +19,9 @@ Living log for **routing and cascades**. Keep entries **short** — the founder 
 
 ## Latest routing update
 
+- 2026-04-19 — Maya asked for a no-edit weekly steer read; top items named from current roadmap only.
+- 2026-04-19 — Weekly steer read given from disk only; no agent delegations and no roadmap edits.
+
 When Product emits **`roadmap.changed`**, fan the same **id + title + column change** to Marketing (timing / message) and Finance (GMV / burn). Do not let domain agents talk past each other.
 
 ## Observations about Maya / Crumb

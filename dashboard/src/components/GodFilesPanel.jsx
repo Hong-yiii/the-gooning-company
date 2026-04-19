@@ -314,6 +314,9 @@ function DiffAwarePara({ children, ...props }) {
 }
 
 const MARKDOWN_COMPONENTS = {
+  /* god.md uses ## often — that becomes <h2>; without overrides UA styles look like giant H1s. */
+  h1: ({ node, ...props }) => <h1 className={styles.h1} {...props} />,
+  h2: ({ node, ...props }) => <h2 className={styles.h2} {...props} />,
   p: ({ node, ...props }) => <DiffAwarePara {...props} />,
   strong: ({ node, ...props }) => <strong className={styles.strong} {...props} />,
   em: ({ node, ...props }) => <em className={styles.em} {...props} />,
@@ -333,6 +336,8 @@ const MARKDOWN_COMPONENTS = {
   ),
   h3: ({ node, ...props }) => <h3 className={styles.h3} {...props} />,
   h4: ({ node, ...props }) => <h4 className={styles.h4} {...props} />,
+  h5: ({ node, ...props }) => <h5 className={styles.h4} {...props} />,
+  h6: ({ node, ...props }) => <h6 className={styles.h4} {...props} />,
   blockquote: ({ node, ...props }) => (
     <blockquote className={styles.blockquote} {...props} />
   ),

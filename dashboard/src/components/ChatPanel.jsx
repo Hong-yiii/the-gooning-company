@@ -308,7 +308,42 @@ function truncate(s, n) {
 
 // ─── Markdown renderer for chat bubbles ──────────────────────────────────────
 
+/**
+ * Models often stream router replies without strict newlines — e.g. `## TL;DR- text`,
+ * `- bullet## Product-`, or `## A## B`. CommonMark only treats `##` as a heading at
+ * line start, so the whole bubble becomes one `<p>` and `##` shows up as literal text.
+ */
+function normalizeAssistantMarkdown(raw) {
+  if (raw == null || typeof raw !== 'string') return raw
+  const src = raw.replace(/\r\n/g, '\n')
+
+  // Known router section titles glued with "-" / em dash (often mid-line: `- x## Product-`).
+  let t = src.replace(
+    /(##\s*)(TL;DR|What I did|Product|Marketing|Finance|Still open)\s*[-–—]\s*/gi,
+    (match, hashes, title, offset) => {
+      const prev = offset === 0 ? '\n' : src[offset - 1]
+      const prefix = prev !== '\n' ? '\n\n' : ''
+      return prefix + hashes + title + '\n\n'
+    }
+  )
+
+  // Two ATX headings jammed: "## Product## Marketing"
+  t = t.replace(/(#{1,6}\s+[^\n#]+?)(#{1,6}\s+)/g, '$1\n\n$2')
+
+  // Any other `##` / `###` not at line start
+  t = t.replace(/([^\n#])(#{1,6}\s+)/g, '$1\n\n$2')
+
+  return t.replace(/\n{5,}/g, '\n\n\n\n')
+}
+
 const MD_COMPONENTS = {
+  /* Headings: UA defaults are huge (~2em H1). Bubble UI needs section labels, not page titles. */
+  h1: ({ node, ...props }) => <h1 className={`${styles.mdHeading} ${styles.mdH1}`} {...props} />,
+  h2: ({ node, ...props }) => <h2 className={`${styles.mdHeading} ${styles.mdH2}`} {...props} />,
+  h3: ({ node, ...props }) => <h3 className={`${styles.mdHeading} ${styles.mdH3}`} {...props} />,
+  h4: ({ node, ...props }) => <h4 className={`${styles.mdHeading} ${styles.mdH3}`} {...props} />,
+  h5: ({ node, ...props }) => <h5 className={`${styles.mdHeading} ${styles.mdH3}`} {...props} />,
+  h6: ({ node, ...props }) => <h6 className={`${styles.mdHeading} ${styles.mdH3}`} {...props} />,
   p: ({ node, ...props }) => <p className={styles.mdPara} {...props} />,
   strong: ({ node, ...props }) => <strong className={styles.mdStrong} {...props} />,
   em: ({ node, ...props }) => <em className={styles.mdEm} {...props} />,
@@ -333,7 +368,8 @@ const MD_COMPONENTS = {
 }
 
 function MessageMarkdown({ text }) {
-  return <ReactMarkdown components={MD_COMPONENTS}>{text}</ReactMarkdown>
+  const normalized = normalizeAssistantMarkdown(text)
+  return <ReactMarkdown components={MD_COMPONENTS}>{normalized}</ReactMarkdown>
 }
 
 // ─── Small bits ──────────────────────────────────────────────────────────────
