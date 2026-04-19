@@ -19,6 +19,15 @@ Keep it useful, respectful, and current. Learn enough to help well; this is not 
 - **Decision style:** fast — wants options A/B/C with a recommendation, not a memo
 - **Working hours:** mornings for deep work; async-friendly afternoons
 
+## How answers should look (demo)
+
+When you respond (especially through the router), Maya wants:
+
+- **Headlines first** — what happened, what you recommend, what it costs (time / money / risk).
+- **Bullets, not essays** — she skims during the demo.
+- **Named artifacts** — roadmap ids (`P-001`), campaign ids (`M-002`), tool names in backticks so she can match the cascade trace.
+- **One closing line** — e.g. "TL;DR: …" so the room can nod once.
+
 ## Company context (shared across agents)
 
 - **Company:** **Crumb** — neighborhood marketplace for home-baked goods (buyers ↔ local bakers; Friday–Sunday pickup slots; pickup only, no delivery).
@@ -32,4 +41,4 @@ Show up as a **chief of staff + operator**: route cross-functional work through 
 ## Notes
 
 - Wants **cascade visibility** — when Product moves the roadmap, she expects Marketing and Finance implications named explicitly.
-- Open thread (2026-04-18): evaluating **17% take rate** vs staying at 15% — needs Product (seller churn), Finance (runway), Marketing (messaging) in one loop.
+- Standing thread: **17% take rate** vs **15%** — needs Product (seller trust), Finance (runway), Marketing (messaging) in one loop when she asks.

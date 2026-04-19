@@ -1,25 +1,32 @@
 # god.md — product
 
-Your private living doc. Not a duplicate of the roadmap — this is your reasoning *about* the roadmap.
+Private reasoning about the roadmap — **not** a copy of `state/roadmap.md`. Use **roadmap ids** here (`P-001`, …).
+
+## At a glance (demo)
+
+- **Liquidity lens:** balance **baker supply** vs **buyer demand** per neighborhood.
+- **East Brooklyn:** demand high, supply thin — **supply/demand ~0.42** in mocks.
+- **Williamsburg:** closer to **saturated (~1.02)** — prefer retention + basket over raw acquisition.
+- **Holiday unlock:** **`P-002`** pickup-scheduler v2 — target narrative ship before **2026-11-20**.
 
 ## Current worldview
 
-- Crumb wins when **neighborhood liquidity** is balanced: enough **active bakers + listings** that buyers see choice, without **no-shows** eroding trust.
-- **East Brooklyn** is demand-rich / supply-poor — supply/demand ratio ~**0.42** in recent metrics; **Williamsburg** is closer to **saturated** (~1.02) — optimize for retention and basket there, not raw acquisition.
-- **Pickup-scheduler v2** (`P-002`) is the unlock for **holiday** volume (late-afternoon slots); ship before **2026-11-20** if we mean the holiday story.
+- Crumb wins when neighborhoods feel **choice + reliability** (listings + on-time pickup).
+- **No-shows** erode trust faster than a weak homepage.
+- **`P-001`** is the active lever for East Brooklyn **baker count**.
 
 ## Open product questions
 
-- Ship **pickup-scheduler v2** before we lean hard into holiday gifting (`M-001`), or run a **thin** holiday with current slots?
-- **Subscriptions** (`P-004`) vs **basket bundles** first — which moves **repeat-buyer rate** faster with less eng risk?
+- **`P-002`** before heavy **`M-001`** holiday spend — or a **thin** holiday on current slots?
+- **`P-004`** subscriptions vs **bundles** first for repeat-rate?
 
 ## Roadmap reasoning log
 
-- **P-000** shipped **2026-03-14** — baker dashboard v1; adoption **71%** week one — good signal for baker-side self-serve next.
-- **P-001** added **2026-04-02** — East Brooklyn supply sprint — explicit numeric target (40 new bakers by **2026-05-30**) so Marketing/Finance can model CAC vs GMV lift.
-- **P-002** in **Next** — scheduler v2 gates holiday narrative; blocked on eng capacity, not strategy.
+- **P-000** — shipped **2026-03-14** — baker dashboard v1 — **~71%** week-one adoption.
+- **P-001** — added **2026-04-02** — East Brooklyn supply sprint — target **+40 bakers by 2026-05-30**.
+- **P-002** — in **Next** — scheduler v2 — gates believable holiday pickup windows.
 
 ## Signals from other functions
 
-- **Finance:** repeat-buyer rate (~**34%** / 30d) is the biggest **runway** lever before Series A — aligns with **P-004** priority debate.
-- **Marketing:** holiday **M-001** needs **P-002** shipped for believable "pickup windows" copy — coordinate dates before Reels spend ramps.
+- **Finance:** repeat-buyer **~34% / 30d** is a runway lever → ties to **`P-004`** debate.
+- **Marketing:** **`M-001`** copy needs **`P-002`** shipped for “pick your window” truthfulness.

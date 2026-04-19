@@ -1,27 +1,35 @@
 # god.md — finance
 
+Assumptions + scenarios — **not** a ledger. Numbers come from **`finance.*`** mocks unless stated otherwise.
+
+## At a glance (demo)
+
+- **Take rate:** **15%** today — **17%** scenario tracked under **`F-001`**.
+- **Rough burn:** **~$180k/mo** base (illustrative).
+- **Two snapshots:** internal memo (**~11 mo runway** as of **2026-04-01**) vs tool month **`2026-04`** (**~13.4 mo** in `get_financial_report`) — **both are mock**; explain the gap in one line when presenting.
+
 ## Projection assumptions (current)
 
-- **Take rate:** 15% on GMV (17% scenario modeled under **F-001**).
-- **Avg order:** ~**$22**; **gross margin** (after payment fees + credits) ~**68%** on take-rate revenue line (mock model — not GAAP).
-- **Monthly burn (base):** ~**$180k** cash (rounded); **CAC** benchmarks: buyer **~$8**, baker **~$32**; payback **~4 months** on marginal buyer cohort (tooling mocks).
-- **Headcount / opex:** held flat in base case; marketing flex is the main lever.
+- **Avg order ~$22** · **GMV run-rate ~$220k/mo** (demo fixtures).
+- **CAC bands:** buyer **~$8** · baker **~$32** (mocks).
+- **Opex flex:** marketing is the main lever in the mock model.
 
 ## Last projection snapshot
 
-- **As of 2026-04-01** (internal snapshot — may differ from latest `finance.get_financial_report` month close): **cash ~$2.0M**, **runway ~11 months** at current burn; **GMV run-rate ~$220k/mo**; model **breakeven** around **~$520k GMV/mo** at current take + opex (illustrative).
+- **2026-04-01 memo:** cash **~$2.0M** · runway **~11 mo** · breakeven story **~$520k GMV/mo** (illustrative).
+- **Tool check:** run **`get_financial_report`** for **`2026-04`** when the room wants a month-shaped table.
 
 ## Scenarios tracked
 
-- **17% take rate:** ~**+$4.5k/mo** net on current GMV in mock model — **risk:** baker churn / listing quality hit; needs Product + Marketing stress test.
-- **East Brooklyn supply launch** (pairs with **P-001**): one-time **~$40k** blended CAC for baker acquisition push; **~+$45k/mo** GMV by month **+4** if conversion holds (mock).
-- **Holiday spike:** **+22%** GMV **Nov–Dec** vs baseline if **P-002** ships on time; miss the ship date → halve the spike in model.
+- **17% take rate** — upside vs **baker churn** risk (pairs with **`F-001`**).
+- **East Brooklyn push** — pairs with **`P-001`**; watch **one-time CAC** vs **GMV lift** in mocks.
+- **Holiday spike** — **`+22% GMV`** Nov–Dec if **`P-002`** ships on time; half that if late.
 
 ## Signals from other functions
 
-- **P-001** (East Brooklyn sprint) — expect incremental **opex** asks from Marketing; cost before promising runway-neutral.
-- **M-001** holiday teaser — needs **`finance.cost_campaign`** before approval narrative to Maya.
+- **`P-001`** — expect Marketing **opex** asks — **cost** before “runway-neutral” claims.
+- **`M-001`** — run **`finance.cost_campaign`** before approving spend story to Maya.
 
-## Open questions for the founder
+## Open questions for Maya
 
-- What is the **minimum acceptable runway** (months of cash) she wants before opening a formal **Series A** process?
+- Minimum **runway (months)** she wants **before** a formal Series A kickoff?

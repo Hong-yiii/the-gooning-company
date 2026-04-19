@@ -155,6 +155,7 @@
 }
 
 .card {
+  position: relative;
   background: var(--cream-1);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-md);
@@ -259,3 +260,139 @@
 .statusInProgress { background: #c8a86a; }
 .statusBlocked { background: #c08060; }
 .statusDone { background: #8ab8ae; }
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+/* Column count pulse — runs when a column's item count changes. */
+.columnCountPulse {
+  animation: columnPulse 2s ease-out;
+  color: #3f6a8a !important;
+  background: rgba(138, 163, 200, 0.28) !important;
+}
+
+@keyframes columnPulse {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.35); box-shadow: 0 0 0 0 rgba(138, 163, 200, 0.6); }
+  60%  { transform: scale(1);    box-shadow: 0 0 0 8px rgba(138, 163, 200, 0); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(138, 163, 200, 0); }
+}
+
+/* Card enter — new item appeared. Green glow + slide-in + persistent ring. */
+.cardEntering {
+  animation: cardEnter 520ms cubic-bezier(0.22, 1, 0.36, 1) both,
+             cardEnterGlow 12s ease-out forwards;
+  border-color: rgba(122, 184, 122, 0.7);
+}
+
+@keyframes cardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cardEnterGlow {
+  0% {
+    box-shadow:
+      0 0 0 2px rgba(122, 184, 122, 0.5),
+      0 6px 18px -6px rgba(122, 184, 122, 0.7);
+    background: rgba(122, 184, 122, 0.12);
+  }
+  15% {
+    box-shadow:
+      0 0 0 2px rgba(122, 184, 122, 0.5),
+      0 6px 18px -6px rgba(122, 184, 122, 0.7);
+    background: rgba(122, 184, 122, 0.10);
+  }
+  85% {
+    box-shadow:
+      0 0 0 1px rgba(122, 184, 122, 0.15),
+      0 0 0 0 rgba(122, 184, 122, 0);
+    background: rgba(122, 184, 122, 0.02);
+  }
+  100% {
+    box-shadow: none;
+    background: var(--cream-1);
+  }
+}
+
+/* Card moved — the FLIP handles physical motion; this adds the "look here"
+   blue halo at the destination so the eye lands on it after the slide. */
+.cardMoved {
+  animation: cardMovedGlow 8s ease-out forwards;
+  border-color: rgba(138, 163, 200, 0.7);
+}
+
+@keyframes cardMovedGlow {
+  0% {
+    box-shadow:
+      0 0 0 2px rgba(138, 163, 200, 0.55),
+      0 8px 22px -6px rgba(138, 163, 200, 0.8);
+    background: rgba(138, 163, 200, 0.12);
+  }
+  15% {
+    box-shadow:
+      0 0 0 2px rgba(138, 163, 200, 0.55),
+      0 8px 22px -6px rgba(138, 163, 200, 0.6);
+  }
+  85% {
+    box-shadow:
+      0 0 0 1px rgba(138, 163, 200, 0.15),
+      0 0 0 0 rgba(138, 163, 200, 0);
+    background: rgba(138, 163, 200, 0.02);
+  }
+  100% {
+    box-shadow: none;
+    background: var(--cream-1);
+  }
+}
+
+/* Little floating pills on the card corners during entry/move. */
+.fxBadgeNew,
+.fxBadgeMoved {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  transform-origin: top right;
+}
+
+.fxBadgeNew {
+  color: #2e6a2e;
+  background: #d4ecd4;
+  border: 1px solid rgba(122, 184, 122, 0.6);
+  box-shadow: 0 2px 6px -2px rgba(122, 184, 122, 0.6);
+  animation: badgePopIn 340ms cubic-bezier(0.22, 1, 0.36, 1) both,
+             badgeFadeOut 2s ease-in 10s forwards;
+}
+
+.fxBadgeMoved {
+  color: #34547a;
+  background: #dae4f2;
+  border: 1px solid rgba(138, 163, 200, 0.6);
+  box-shadow: 0 2px 6px -2px rgba(138, 163, 200, 0.6);
+  animation: badgePopIn 340ms cubic-bezier(0.22, 1, 0.36, 1) both,
+             badgeFadeOut 1.2s ease-in 6.6s forwards;
+}
+
+@keyframes badgePopIn {
+  0%   { opacity: 0; transform: scale(0.6) translateY(2px); }
+  60%  { opacity: 1; transform: scale(1.06) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes badgeFadeOut {
+  to { opacity: 0; transform: scale(0.95) translateY(-2px); }
+}

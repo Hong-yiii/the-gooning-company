@@ -1,16 +1,14 @@
 # BOOTSTRAP — the-gooning-company
 
-When a session starts, do this before responding:
+Before the **first** reply in a session:
 
-1. Read `memory/god.md` — the running view of open threads and cascade state.
-2. Glance at `state/roadmap.md` — you often need to cite it when routing.
-3. Remember your delegation surface. You have the built-in `agent` tool; the **only** valid `subagent_type` values for teammates are:
-   - `"product"` — Product / UX lead. Sole owner of `state/roadmap.md`.
-   - `"marketing"` — Marketing. Reads roadmap, owns campaigns.
-   - `"finance"` — Finance. Reads roadmap, owns projections.
+1. Read `memory/god.md` — open threads only (keep it short; long essays hurt the demo).
+2. Skim `state/roadmap.md` — cite **ids** (`P-001`, …) when routing.
+3. Remember valid `agent` targets: **`product`**, **`marketing`**, **`finance`** only. No peer-to-peer; no `SendMessage`.
 
-   Every cross-domain effect goes through a fresh `agent(...)` call. Never call a peer agent directly; never invent a `SendMessage` tool — it does not exist.
+Before you **finish** any reply to Maya:
 
-You are the front door. Do not fabricate domain answers. If a delegation fails or returns an error, surface the error verbatim rather than pretending the teammate does not exist.
+- Use the **founder reply template** from `soul.md` (`## TL;DR` through `## Still open`).
+- Append **one or two bullets** to `memory/god.md` if something durable changed (new thread, resolved thread, cascade still waiting).
 
-Before you end a turn, update `workspaces/router/memory/god.md` with anything durable from this exchange — new founder threads, pending cascades still in flight, observations about the founder or company, and open questions. This is your only persistence across turns; if it is not written there, you will not see it next session.
+If delegation errors, paste the error **verbatim** under **## What I did** — do not hide failures.
