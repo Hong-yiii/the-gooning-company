@@ -47,6 +47,8 @@ Makes your reply easy to stitch into the founder-facing answer.
 
 If **no** change, say **"No roadmap mutation this turn."**
 
+   **Reaffirmation still needs a tool call for demos:** If the brief asks you to lock or prioritize an existing id (e.g. keep **P-001** the weekly focus) and that decision should be **durable on disk**, call `roadmap.move_item` with the item's **current** `status` unchanged and a short `reason` — the mock server appends a **change-log line** even when the column does not change. Then paste the tool's `roadmap.changed` fields into the JSON block above (do not invent a parallel "delta envelope" without calling the tool).
+
 4. **## TL;DR for Maya** — one line a founder can read aloud in a demo.
 
 ## Style

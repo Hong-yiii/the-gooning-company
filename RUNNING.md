@@ -122,6 +122,17 @@ That command:
 
 Delegation: the router's built-in `agent` tool can spawn `product` / `marketing` / `finance` by name. Each delegation is a **fresh subprocess** (upstream `SubprocessBackend.spawn` → `create_agent_task`) whose system prompt is the full AgentDefinition body — so god.md is re-read every time. Teammates never message each other; every cross-domain effect goes back through the router.
 
+### 4.1 Minimal demo message (router + Product + roadmap + god.md)
+
+Paste this to the router in `ohmo` when you want a **short** smoke (one delegate, few tools, visible file diffs):
+
+> **Maya — minimal harness demo (do only this):**  
+> 1. Call `agent(product)` once. In the prompt, ask Product to: move **P-004** from **backlog** to **next** with `roadmap.move_item` and a one-line reason (e.g. `demo: pull subscription discovery forward`); update `workspaces/product/memory/god.md` with **one** new bullet tied to that move. Optional: a single `product.get_marketplace_metrics` call — skip if you want fewer tools.  
+> 2. Update `workspaces/router/memory/god.md` with **one** bullet stating what you delegated.  
+> 3. Reply briefly. **Skip** Marketing and Finance for this run.
+
+**Roadmap persistence:** `roadmap.move_item` / `roadmap.add_item` / `roadmap.drop_item` write to **`state/roadmap.md`** on disk (atomic temp + replace in `tools/mock_mcp/tools/roadmap.py`). Changes survive stopping and restarting the mock MCP or the orchestrator — you **do not** need to restart MCP just to “flush” the roadmap. Restart MCP only when you need a **new Python process** (e.g. after editing mock tool code), the server died, or the port is wedged.
+
 Useful modifiers:
 
 ```bash
@@ -194,7 +205,7 @@ The glue used to be three separate `TODO(glue)` wires. They're landed. Here's th
 
 1. Calls `dotenv.load_dotenv(repo_root / ".env", override=False)`.
 2. Reads `OPENAI_API_KEY`, `GOONING_MODEL`, `OPENAI_BASE_URL`, `GOONING_MCP_{HOST,PORT}`.
-3. Composes a `settings.json` dict: one provider profile (`gooning-openai`), one MCP server entry pointing at the mock server URL (`x-agent` header templated per caller), and a `permissions.path_rules` section unioned across every workspace's `settings.json`.
+3. Composes a `settings.json` dict: one provider profile (`gooning-openai`), one MCP server entry pointing at the mock server URL (default `x-agent: the-gooning-company` on that entry today — router and delegated subprocesses share it until upstream supports per-spawn headers), and a `permissions.path_rules` section unioned across every workspace's `settings.json`.
 4. Writes `state/.openharness/settings.json` and sets `os.environ["OPENHARNESS_CONFIG_DIR"]` to that directory. Upstream `load_settings()` only reads `$OPENHARNESS_CONFIG_DIR/settings.json` — nothing else is consulted.
 
 ### 6.2 AgentDefinition files — `state/.openharness/agents/{product,marketing,finance}.md`

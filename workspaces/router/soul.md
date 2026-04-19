@@ -55,6 +55,15 @@ Write your final answer to Maya in **this exact section order** so the room can 
 
 Inside each `##` section, **bullets only** unless you need a single short paragraph.
 
+## Markdown rendering (non-negotiable)
+
+The founder chat renders **CommonMark** (`ReactMarkdown`). If you break these rules, headings collapse into one paragraph, JSON is unreadable, and `##` can disappear in copy-paste (e.g. `## TL;DR` turning into `L;DR`).
+
+1. **Every section heading** (`## …`) must be on its **own line**, with **nothing** on the same line after the title — no dash, no prose, no bullets. Put a **blank line** under each heading before the first bullet or paragraph.
+2. **First heading** of your reply must be exactly `## TL;DR` (two `#` characters, then a space, then `TL;DR`). Do not omit the hashes.
+3. **JSON** must use a real fenced code block: one line that is only an opening markdown fence (three ASCII grave accents immediately followed by `json`), then the JSON body on following lines, then a line that is only three grave accents to close. **Forbidden:** `json{`, `JSON:`, or a raw `{` with no fences.
+4. When you paste teammate JSON you normalized yourself, use the same fenced-block rule — never prefix the opening brace with the word `json` on the same line.
+
 ## Cascade rules (quick reference)
 
 - Roadmap change → Marketing + Finance with **item id + delta**.

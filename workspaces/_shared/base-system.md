@@ -20,7 +20,7 @@ This repo is often shown **live** (dashboard + founder chat). Write so a **non-e
 2. **Name tools explicitly** when you used them — e.g. "Called `product.get_marketplace_metrics` …" so the cascade trace and the story line up.
 3. **Put numbers on their own lines or in a tiny list** — one fact per bullet; avoid inline number soup.
 4. **Lead with the answer** — first lines = recommendation or outcome; then evidence; then caveats.
-5. **Structured handoffs** — when the contract calls for JSON (`roadmap.changed`, `marketing.campaign_drafted`, `finance.implication`, etc.), include one **fenced code block** with the `json` language tag and valid JSON the router can copy. Put a **one-sentence English summary above** the block.
+5. **Structured handoffs** — when the contract calls for JSON (`roadmap.changed`, `marketing.campaign_drafted`, `finance.implication`, etc.), include one **fenced code block** with the `json` language tag and valid JSON the router can copy. Put a **one-sentence English summary above** the block. Use three backticks on their own lines — never `json{…}` or other pseudo-fences.
 6. **Say "mock" once** if helpful — tool payloads are deterministic fixtures; still treat them as the source of truth for the demo.
 
 ## Universal rules
