@@ -35,7 +35,9 @@ import argparse
 import atexit
 import json
 import os
+import shutil
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -96,10 +98,38 @@ def _describe(cfg: OrchestratorConfig) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _tcp_port_has_listener(host: str, port: int, *, timeout: float = 0.35) -> bool:
+    """True if something already accepts TCP connections on ``host:port``."""
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout):
+            return True
+    except (TimeoutError, OSError):
+        return False
+
+
+def _require_mcp_port_free(host: str, port: str) -> None:
+    """Fail fast with a copy-pasteable hint when the mock MCP port is taken."""
+    if not _tcp_port_has_listener(host, int(port)):
+        return
+    py = sys.executable
+    raise SystemExit(
+        f"mock MCP port {host}:{port} is already in use (another mock server or "
+        f"a crashed child is still listening).\n"
+        f"  Windows:  netstat -ano | findstr \":{port}\"\n"
+        "            then:  taskkill /PID <pid> /F\n"
+        "  Or set GOONING_MCP_PORT to a free port in `.env` and match "
+        "`workspaces/_shared/mcp.json` if you changed the URL there.\n"
+        "  If mock MCP is already running in another terminal, skip starting a second one:\n"
+        f"    {py} -m orchestrator.launch --no-mcp\n"
+        f"    {py} -m dashboard_backend --no-mcp"
+    )
+
+
 def _start_mock_mcp(cfg: OrchestratorConfig) -> subprocess.Popen[bytes]:
     py = sys.executable
     host = os.environ.get("GOONING_MCP_HOST", "127.0.0.1")
     port = os.environ.get("GOONING_MCP_PORT", "8765")
+    _require_mcp_port_free(host, port)
     cmd = [py, "-m", MCP_MODULE, "--host", host, "--port", port]
     print(f"[orchestrator] starting mock MCP: {' '.join(cmd)}")
     # start_new_session puts the child in its own process group + session,
@@ -181,7 +211,11 @@ def _install_signal_handlers(mcp_proc_ref: list[subprocess.Popen[bytes] | None])
         signal.signal(signum, signal.SIG_DFL)
         os.kill(os.getpid(), signum)
 
-    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+    # Windows has no SIGHUP; only register signals the runtime exposes.
+    for sig_name in ("SIGINT", "SIGTERM", "SIGHUP"):
+        sig = getattr(signal, sig_name, None)
+        if sig is None:
+            continue
         try:
             signal.signal(sig, _handler)
         except (ValueError, OSError):
@@ -213,6 +247,31 @@ def _install_signal_handlers(mcp_proc_ref: list[subprocess.Popen[bytes] | None])
 # ---------------------------------------------------------------------------
 
 
+def _resolve_ohmo_binary() -> Path:
+    """Return the ``ohmo`` console script next to ``sys.executable`` when present.
+
+    On Windows, pip writes ``ohmo.exe`` (and sometimes ``ohmo.cmd``) under
+    ``Scripts\\``; on Unix it is a ``ohmo`` file in ``bin/``. We must not
+    assume the POSIX name only — otherwise ``Path.is_file()`` fails and we
+    fall through to ``Path("ohmo")``, which is not on PATH when the venv is
+    not activated.
+    """
+    venv_bin = Path(sys.executable).resolve().parent
+    if sys.platform == "win32":
+        for name in ("ohmo.exe", "ohmo.cmd"):
+            candidate = venv_bin / name
+            if candidate.is_file():
+                return candidate
+    else:
+        candidate = venv_bin / "ohmo"
+        if candidate.is_file():
+            return candidate
+    which = shutil.which("ohmo")
+    if which:
+        return Path(which)
+    return Path("ohmo")
+
+
 def _run_router(cfg: OrchestratorConfig, bootstrap: Bootstrap, *, extra_args: list[str]) -> int:
     """Exec ``ohmo --workspace <router>`` inheriting the prepared environment.
 
@@ -231,15 +290,18 @@ def _run_router(cfg: OrchestratorConfig, bootstrap: Bootstrap, *, extra_args: li
       * the three ``agents/<teammate>.md`` files so the ``agent`` tool
         can delegate by name.
     """
-    # Prefer the binary that installed alongside openharness-ai in our venv
-    # (so we don't accidentally pick up a system-wide ohmo of a different
-    # version). `sys.executable` is the active Python; its bin/ohmo is
-    # what was installed with it.
-    venv_bin = Path(sys.executable).parent
-    ohmo_bin = venv_bin / "ohmo"
+    ohmo_bin = _resolve_ohmo_binary()
     if not ohmo_bin.is_file():
-        # Fall back to PATH-resolved ohmo.
-        ohmo_bin = Path("ohmo")
+        raise SystemExit(
+            "Cannot find the `ohmo` CLI next to this Python interpreter.\n"
+            f"  Expected something like: {Path(sys.executable).resolve().parent / 'ohmo.exe'} (Windows) "
+            f"or .../bin/ohmo (Unix).\n"
+            f"  Resolved to: {ohmo_bin}\n"
+            "  Install:  pip install -e \".[dev]\"\n"
+            "  Then run with this repo's venv Python, e.g.\n"
+            "    Windows:  .venv\\Scripts\\python.exe -m orchestrator.launch\n"
+            "    Unix:     .venv/bin/python -m orchestrator.launch"
+        )
 
     router = cfg.router()
     cmd: list[str] = [
@@ -257,11 +319,12 @@ def _run_router(cfg: OrchestratorConfig, bootstrap: Bootstrap, *, extra_args: li
     # OPENHARNESS_CONFIG_DIR + OPENAI_API_KEY from .env).
     try:
         return subprocess.call(cmd, cwd=cfg.repo_root, env=os.environ.copy())
-    except FileNotFoundError:
+    except (FileNotFoundError, OSError) as exc:
         raise SystemExit(
-            f"could not execute {ohmo_bin}. Activate the venv with "
-            "`source .venv/bin/activate` or reinstall with `uv pip install -e .[dev]`."
-        )
+            f"could not execute {ohmo_bin}: {exc}\n"
+            "Install deps in this venv (`pip install -e \".[dev]\"`) and launch with "
+            "that venv's `python` / `python.exe` (see RUNNING.md §7.3b)."
+        ) from exc
 
 
 # ---------------------------------------------------------------------------

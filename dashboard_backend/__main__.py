@@ -10,14 +10,17 @@ Boots the complete application in a single process tree:
 
 Usage
 -----
+Use this repo's venv so ``uvicorn`` / ``starlette`` resolve (same as ``orchestrator.launch``).
+
 Production / single-URL mode (serves built SPA from ``dashboard/dist/``):
 
-    python -m dashboard_backend
+    .venv/Scripts/python.exe -m dashboard_backend          # Windows
+    .venv/bin/python -m dashboard_backend                  # Unix
 
 Development mode (backend on :8000, Vite on :3000 proxies ``/api``):
 
     # terminal 1
-    python -m dashboard_backend
+    .venv/Scripts/python.exe -m dashboard_backend
     # terminal 2
     cd dashboard && npm run dev
 """
@@ -27,8 +30,19 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
+import sys
 
-import uvicorn
+try:
+    import uvicorn
+except ModuleNotFoundError as exc:
+    exe = sys.executable
+    raise SystemExit(
+        "Missing dependency (e.g. `uvicorn`). Run with this repo's venv Python "
+        "after `pip install -e \".[dev]\"`:\n"
+        f"  {exe} -m pip install -e \".[dev]\"\n"
+        f"  {exe} -m dashboard_backend\n"
+        "On Windows, if `python` is not the venv, use `.venv\\Scripts\\python.exe` explicitly."
+    ) from exc
 
 from orchestrator.bootstrap import run_bootstrap
 from orchestrator.config import load_config

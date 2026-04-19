@@ -260,11 +260,18 @@ Likely the package name on PyPI has changed, or the version range is wrong. Chec
 
 `.env` either doesn't exist or doesn't have the key. Copy `.env.example`, fill it in, rerun. Don't `export` it in your shell instead of using `.env` — the orchestrator intentionally reads the dotfile so both the launcher and the MCP subprocess and the `ohmo` subprocess all see the same value.
 
-### 7.3b `ohmo: command not found`
+### 7.3b `ohmo: command not found` / `could not execute ohmo`
 
-You're not in the venv, or `openharness-ai` didn't install its console scripts. Activate the venv (`source .venv/bin/activate`) and rerun `uv pip install -e ".[dev]"`. Confirm with `which ohmo` — it should resolve inside `.venv/bin/`.
+You're not in the venv, or `openharness-ai` didn't install its console scripts. Rerun `uv pip install -e ".[dev]"` (or `pip install -e ".[dev]"`).
 
-### 7.3c MCP tool calls fail with `caller 'unknown' not allowed for tool …`
+- **Unix:** activate (`source .venv/bin/activate`) and confirm `which ohmo` → `.venv/bin/ohmo`.
+- **Windows:** pip installs **`ohmo.exe`** under `.venv\Scripts\`, not a file named `ohmo`. The orchestrator resolves that automatically when you launch with the venv’s Python: **`.venv\Scripts\python.exe -m orchestrator.launch`**. You can also run `.\.venv\Scripts\ohmo.exe --help` without activating the venv.
+
+### 7.3c `mock MCP port … already in use` / `[Errno 10048]` on Windows
+
+Another process is bound to **`GOONING_MCP_HOST` + `GOONING_MCP_PORT`** (default `127.0.0.1:8765`). Free it (`netstat` / `taskkill` on Windows; see orchestrator error text) **or** change **`GOONING_MCP_PORT`** in `.env` and keep **`workspaces/_shared/mcp.json`** consistent. If you already run **`python -m tools.mock_mcp.server`** in a separate terminal, start the router with **`python -m orchestrator.launch --no-mcp`** so a second server is not spawned.
+
+### 7.3d MCP tool calls fail with `caller 'unknown' not allowed for tool …`
 
 Only happens when `GOONING_STRICT_CALLERS=1`. The `x-agent` header isn't being propagated by the MCP client — check that `state/.openharness/settings.json`'s `mcp_servers.gooning_mock.headers` includes `x-agent`. Fall back to soft mode (`unset GOONING_STRICT_CALLERS`) while debugging.
 

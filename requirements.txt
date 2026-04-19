@@ -1,0 +1,2 @@
+# OpenHarness CLI + libraries (https://github.com/HKUDS/OpenHarness)
+openharness-ai==0.1.6
